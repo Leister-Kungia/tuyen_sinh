@@ -59,7 +59,7 @@ log = logging.getLogger(__name__)
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
 LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
-EMBEDDING_MODEL = "nomic-embed-text-v1_5"  # Groq Embeddings API — không cần load model local
+EMBEDDING_MODEL = "intfloat/multilingual-e5-large"  # Groq Embeddings API — không cần load model local
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
 # Đường dẫn tính từ vị trí file .py, không phụ thuộc thư mục đang chạy lệnh
@@ -669,7 +669,7 @@ def chay_ingest():
     print("  INGEST DỮ LIỆU TUYỂN SINH → CHROMADB")
     print("=" * 60)
 
-    reset = input("\nReset toàn bộ DB cũ? (y/N): ").strip().lower() == 'y'
+    import sys; reset = sys.stdin.isatty() and input("\nReset toàn bộ DB cũ? (y/N): ").strip().lower() == 'y'
     collection  = _khoi_tao_chroma(reset=reset)
     groq_client = _tao_groq_client()
     os.makedirs(EXCEL_DIR, exist_ok=True)
