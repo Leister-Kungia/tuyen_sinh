@@ -664,7 +664,7 @@ def chay_ingest():
     print("  INGEST DỮ LIỆU TUYỂN SINH → CHROMADB")
     print("=" * 60)
 
-    reset = input("\nReset toàn bộ DB cũ? (y/N): ").strip().lower() == 'y'
+    import sys; reset = sys.stdin.isatty() and input("\nReset toàn bộ DB cũ? (y/N): ").strip().lower() == 'y'
     collection  = _khoi_tao_chroma(reset=reset)
     groq_client = _tao_groq_client()
     os.makedirs(EXCEL_DIR, exist_ok=True)
