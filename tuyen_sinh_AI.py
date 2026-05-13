@@ -60,7 +60,7 @@ log = logging.getLogger(__name__)
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
 LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
-EMBEDDING_MODEL = "intfloat/multilingual-e5-small"  # miễn phí, hỗ trợ tiếng Việt
+EMBEDDING_MODEL = "paraphrase-multilingual-MiniLM-L12-v2"  # miễn phí, hỗ trợ tiếng Việt
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
 CHROMA_DB_PATH  = "./chroma_db"       # thư mục lưu DB — tự tạo khi chạy
@@ -770,7 +770,7 @@ class TuVanTuyenSinh:
     def _tim_du_lieu(self, cau_hoi: str, loai_filter: str = None) -> str:
         """Tìm dữ liệu liên quan trong ChromaDB bằng vector search."""
         query_vec = self.embed_model.encode(
-            f"query: {cau_hoi}", normalize_embeddings=True
+            cau_hoi, normalize_embeddings=True
         ).tolist()
         try:
             where   = {"loai": loai_filter} if loai_filter else None
