@@ -60,7 +60,7 @@ log = logging.getLogger(__name__)
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
 LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
-EMBEDDING_MODEL = "intfloat/multilingual-e5-large"  # miễn phí, hỗ trợ tiếng Việt
+EMBEDDING_MODEL = "intfloat/multilingual-e5-small"  # miễn phí, hỗ trợ tiếng Việt
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
 CHROMA_DB_PATH  = "./chroma_db"       # thư mục lưu DB — tự tạo khi chạy
