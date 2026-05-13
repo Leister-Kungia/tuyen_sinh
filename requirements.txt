@@ -1,0 +1,23 @@
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+
+# AI / LLM
+groq==0.13.0
+sentence-transformers==3.3.1
+
+# Vector DB
+chromadb==0.5.23
+
+# Data
+pandas==2.2.3
+openpyxl==3.1.5
+pdfplumber==0.11.4
+
+# Web crawl
+requests==2.32.3
+beautifulsoup4==4.12.3
+
+# Utilities
+tqdm==4.67.1
+python-dotenv==1.0.1
