@@ -886,7 +886,6 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
 
         if dung_web_search:
             log.info(f"[{ten_agent}] Không có data local → dùng web search")
-            # Với compound-mini, prompt cần rõ ràng để model biết cần search
             prompt_web = (
                 f"{lich_su_text}\n" if lich_su_text else ""
             ) + (
@@ -895,14 +894,30 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
                 f"Tư vấn bằng tiếng Việt, xưng 'mình', gọi 'bạn'. "
                 f"Nêu rõ nguồn và năm của thông tin điểm chuẩn nếu có."
             )
-            resp = self.groq.chat.completions.create(
-                model=LLM_MODEL_SEARCH,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user",   "content": prompt_web},
-                ],
-                max_tokens=1200,
-            )
+            try:
+                resp = self.groq.chat.completions.create(
+                    model=LLM_MODEL_SEARCH,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user",   "content": prompt_web},
+                    ],
+                    max_tokens=1200,
+                )
+            except Exception as e:
+                if "429" in str(e) or "rate_limit" in str(e):
+                    # Rate limit compound-mini → fallback về model thường
+                    log.warning(f"[{ten_agent}] compound-mini rate limit → fallback")
+                    import time; time.sleep(3)
+                    resp = self.groq.chat.completions.create(
+                        model=LLM_MODEL,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
+                        ],
+                        max_tokens=1200,
+                    )
+                else:
+                    raise
         else:
             resp = self.groq.chat.completions.create(
                 model=LLM_MODEL,
