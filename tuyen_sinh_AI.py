@@ -58,9 +58,8 @@ log = logging.getLogger(__name__)
 
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
-LLM_MODEL        = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
-LLM_MODEL_SEARCH = "groq/compound-mini"             # tự search web khi không có data local
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"  # ~50MB, nhanh, chạy local không cần API
+LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
+EMBEDDING_MODEL = "intfloat/multilingual-e5-large"  # Groq Embeddings API — không cần load model local
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
 # Đường dẫn tính từ vị trí file .py, không phụ thuộc thư mục đang chạy lệnh
@@ -74,7 +73,7 @@ CHUNK_SIZE    = 500   # số ký tự mỗi đoạn văn
 CHUNK_OVERLAP = 50    # số ký tự chồng lấp giữa 2 đoạn liên tiếp
 
 # ── RAG ──────────────────────────────────────────────────────────────────────
-TOP_K_RESULTS = 3     # lấy 3 đoạn văn liên quan nhất khi tìm kiếm
+TOP_K_RESULTS = 5     # lấy 5 đoạn văn liên quan nhất khi tìm kiếm
 
 # ── Thư mục dữ liệu ──────────────────────────────────────────────────────────
 EXCEL_DIR = os.path.join(_BASE_DIR, "data", "excel")
@@ -431,21 +430,8 @@ Hãy tổng hợp thành một câu trả lời hoàn chỉnh, tự nhiên cho h
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _khoi_tao_chroma(reset: bool = False):
-    """Tạo hoặc mở ChromaDB collection — dùng Groq Embeddings, không cần onnxruntime."""
-    client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-    if reset:
-        try:
-            client.delete_collection(COLLECTION_NAME)
-            log.info("Đã xóa collection cũ.")
-        except Exception:
-            pass
-    collection = client.get_or_create_collection(
-        name=COLLECTION_NAME,
-        metadata={"hnsw:space": "cosine"},
-    )
-    log.info(f"Collection '{COLLECTION_NAME}' — {collection.count()} documents hiện có.")
-    return collection
     """Tạo hoặc mở ChromaDB collection."""
+    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
     client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     if reset:
         try:
@@ -456,6 +442,7 @@ def _khoi_tao_chroma(reset: bool = False):
     collection = client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
+        embedding_function=DefaultEmbeddingFunction(),
     )
     log.info(f"Collection '{COLLECTION_NAME}' — {collection.count()} documents hiện có.")
     return collection
@@ -466,16 +453,14 @@ def _tao_groq_client():
     return Groq(api_key=os.getenv("GROQ_API_KEY", GROQ_API_KEY))
 
 
-# Cache model để không load lại mỗi lần gọi
-_embed_model = None
-
 def _embed(texts: list[str]) -> list[list[float]]:
-    """Tạo embedding dùng SentenceTransformer all-MiniLM-L6-v2 (~50MB)."""
-    global _embed_model
-    if _embed_model is None:
-        from sentence_transformers import SentenceTransformer
-        _embed_model = SentenceTransformer(EMBEDDING_MODEL)
-    return _embed_model.encode(texts, normalize_embeddings=True).tolist()
+    """
+    Tạo vector embedding dùng ChromaDB DefaultEmbeddingFunction (onnxruntime).
+    Không cần API key, chạy hoàn toàn local.
+    """
+    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+    ef = DefaultEmbeddingFunction()
+    return ef(texts)
 
 
 def _chunk_text(text: str) -> list[str]:
@@ -506,34 +491,8 @@ def _chunk_text(text: str) -> list[str]:
     return chunks
 
 
-def _gioi_han_prompt(system: str, user: str, max_ky_tu: int = 12000) -> tuple[str, str]:
-    tong = len(system) + len(user)
-    if tong <= max_ky_tu:
-        return system, user
-    # Ưu tiên giữ system, cắt user trước
-    user_max = max_ky_tu - min(len(system), 4000)
-    if user_max > 200:
-        user = user[:user_max] + "\n...[đã rút gọn]"
-    else:
-        # System quá dài → cắt cả 2
-        system = system[:4000] + "\n...[đã rút gọn]"
-        user = user[:max_ky_tu - 4000] + "\n...[đã rút gọn]"
-    return system, user
-    """
-    Đảm bảo tổng system + user prompt không vượt max_ky_tu.
-    Nếu vượt, cắt bớt phần user (thường chứa du_lieu + lich_su dài nhất).
-    """
-    tong = len(system) + len(user)
-    if tong <= max_ky_tu:
-        return system, user
-    can_cat = tong - max_ky_tu
-    if len(user) > can_cat + 200:
-        user = user[:len(user) - can_cat - 100] + "\n...[đã rút gọn]"
-    return system, user
-
-
 def _luu_vao_chroma(collection, groq_client, documents, metadatas, ids, ten_nguon):
-    """Embed documents qua Groq API rồi lưu vào ChromaDB theo batch."""
+    """Embed documents rồi lưu vào ChromaDB theo batch."""
     if not documents:
         return
     BATCH = 96
@@ -771,7 +730,7 @@ class TuVanTuyenSinh:
                 # Lưu câu hỏi gốc vào lịch sử để lần sau dùng làm context
                 self.lich_su.append({"role": "user", "content": cau_hoi})
                 self.lich_su.append({"role": "assistant", "content": can_hoi_them})
-                self.lich_su = self.lich_su[-10:]
+                self.lich_su = self.lich_su[-20:]
                 return can_hoi_them
 
         # Bước 2: Mỗi agent tìm dữ liệu + trả lời độc lập
@@ -784,66 +743,8 @@ class TuVanTuyenSinh:
         # Lưu lịch sử hội thoại (tối đa 10 lượt gần nhất)
         self.lich_su += [{"role": "user", "content": cau_hoi},
                          {"role": "assistant", "content": tra_loi}]
-        self.lich_su = self.lich_su[-10:]
+        self.lich_su = self.lich_su[-20:]
 
-        return tra_loi
-
-    def hoi_voi_anh(self, cau_hoi: str, image_base64: str, image_type: str) -> str:
-        """
-        Xử lý câu hỏi kèm ảnh — dùng vision model của Groq.
-        Ảnh được encode base64 và gửi cùng text vào model llama-4-scout.
-        """
-        print(f"\n[Câu hỏi + Ảnh] {cau_hoi}")
-
-        VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
-
-        # Ghép lịch sử hội thoại làm context
-        lich_su_text = ""
-        for msg in self.lich_su[-4:]:  # chỉ lấy 4 tin gần nhất
-            prefix = "Bạn" if msg["role"] == "user" else "Mình"
-            noi_dung = msg["content"][:300] + "..." if len(msg["content"]) > 300 else msg["content"]
-            lich_su_text += f"{prefix}: {noi_dung}\n"
-
-        system_prompt = """Bạn là AI tư vấn tuyển sinh đại học Việt Nam.
-Xưng "mình", gọi người hỏi là "bạn". Thân thiện, tự nhiên.
-Khi được gửi ảnh (học bạ, phiếu điểm, bảng điểm chuẩn...), hãy đọc và phân tích nội dung ảnh,
-sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
-
-        user_content = []
-        if lich_su_text:
-            user_content.append({
-                "type": "text",
-                "text": f"Lịch sử trò chuyện:\n{lich_su_text}\n\n"
-            })
-        user_content.append({
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:{image_type};base64,{image_base64}"
-            }
-        })
-        user_content.append({
-            "type": "text",
-            "text": cau_hoi if cau_hoi and cau_hoi != "(Xem ảnh đính kèm)"
-                    else "Bạn xem ảnh này và tư vấn giúp mình nhé."
-        })
-
-        system_prompt = system_prompt[:3000]
-        resp = self.groq.chat.completions.create(
-            model=VISION_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": user_content},
-            ],
-            max_tokens=1200,
-        )
-        tra_loi = resp.choices[0].message.content.strip()
-
-        # Lưu lịch sử
-        self.lich_su += [
-            {"role": "user",      "content": f"[Ảnh đính kèm] {cau_hoi}"},
-            {"role": "assistant", "content": tra_loi},
-        ]
-        self.lich_su = self.lich_su[-10:]
         return tra_loi
 
     def reset_lich_su(self):
@@ -854,12 +755,11 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
 
     def _phan_loai(self, cau_hoi: str) -> tuple[list[str], str]:
         """Gọi Orchestrator → lấy danh sách agent cần dùng và câu hỏi thêm nếu có."""
-        _sys, _usr = _gioi_han_prompt(ORCHESTRATOR_SYSTEM, build_orchestrator_prompt(cau_hoi))
         resp = self.groq.chat.completions.create(
             model=LLM_MODEL,
             messages=[
-                {"role": "system", "content": _sys},
-                {"role": "user",   "content": _usr},
+                {"role": "system", "content": ORCHESTRATOR_SYSTEM},
+                {"role": "user",   "content": build_orchestrator_prompt(cau_hoi)},
             ],
             max_tokens=200,
         )
@@ -890,11 +790,7 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
         return "\n---\n".join(docs) if docs else "Không có dữ liệu liên quan trong hệ thống."
 
     def _chay_agent(self, ten_agent: str, cau_hoi: str) -> str:
-        """Chạy một specialist agent: tìm dữ liệu → ghép prompt → gọi LLM.
-        
-        Nếu không tìm thấy data trong ChromaDB và agent là diem_chuan/truong/nganh
-        → tự động dùng groq/compound-mini để search web thay thế.
-        """
+        """Chạy một specialist agent: tìm dữ liệu → ghép prompt → gọi LLM."""
         cau_hinh = {
             "diem_chuan":   (DIEM_CHUAN_SYSTEM,   build_diem_chuan_prompt,   "diem_chuan"),
             "truong":       (TRUONG_SYSTEM,        build_truong_prompt,       "thong_tin_truong"),
@@ -906,76 +802,29 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
         }
         system_prompt, build_fn, loai_filter = cau_hinh[ten_agent]
         du_lieu = self._tim_du_lieu(cau_hoi, loai_filter)
-        if len(du_lieu) > 2000:
-            du_lieu = du_lieu[:2000] + "..."  # giới hạn để tránh vượt token limit
 
         lich_su_text = ""
-        for msg in self.lich_su[-4:]:  # chỉ lấy 4 tin gần nhất
+        for msg in self.lich_su[-6:]:
             prefix = "Bạn" if msg["role"] == "user" else "Mình"
-            noi_dung = msg["content"][:300] + "..." if len(msg["content"]) > 300 else msg["content"]
-            lich_su_text += f"{prefix}: {noi_dung}\n"
+            lich_su_text += f"{prefix}: {msg['content']}\n"
 
-        # Agent nào dùng data thực tế → fallback web search nếu trống
-        AGENT_CAN_SEARCH = {"diem_chuan", "truong", "nganh"}
-        khong_co_data = "Không có dữ liệu" in du_lieu
-        dung_web_search = khong_co_data and ten_agent in AGENT_CAN_SEARCH
-
-        if dung_web_search:
-            log.info(f"[{ten_agent}] Không có data local → dùng web search")
-            prompt_web = (
-                f"{lich_su_text}\n" if lich_su_text else ""
-            ) + (
-                f"Hãy tìm kiếm thông tin mới nhất trên web để trả lời câu hỏi sau "
-                f"về tuyển sinh đại học Việt Nam:\n\n{cau_hoi}\n\n"
-                f"Tư vấn bằng tiếng Việt, xưng 'mình', gọi 'bạn'. "
-                f"Nêu rõ nguồn và năm của thông tin điểm chuẩn nếu có."
-            )
-            try:
-                _sys2, _usr2 = _gioi_han_prompt(system_prompt, prompt_web)
-                resp = self.groq.chat.completions.create(
-                    model=LLM_MODEL_SEARCH,
-                    messages=[
-                        {"role": "system", "content": _sys2},
-                        {"role": "user",   "content": _usr2},
-                    ],
-                    max_tokens=1200,
-                )
-            except Exception as e:
-                if "429" in str(e) or "rate_limit" in str(e):
-                    # Rate limit compound-mini → fallback về model thường
-                    log.warning(f"[{ten_agent}] compound-mini rate limit → fallback")
-                    import time; time.sleep(3)
-                    _sys, _usr = _gioi_han_prompt(system_prompt, build_fn(du_lieu, cau_hoi, lich_su_text))
-                    resp = self.groq.chat.completions.create(
-                        model=LLM_MODEL,
-                        messages=[
-                            {"role": "system", "content": _sys},
-                            {"role": "user",   "content": _usr},
-                        ],
-                        max_tokens=1200,
-                    )
-                else:
-                    raise
-        else:
-            _sys, _usr = _gioi_han_prompt(system_prompt, build_fn(du_lieu, cau_hoi, lich_su_text))
-            resp = self.groq.chat.completions.create(
-                model=LLM_MODEL,
-                messages=[
-                    {"role": "system", "content": _sys},
-                    {"role": "user",   "content": _usr},
-                ],
-                max_tokens=1200,
-            )
+        resp = self.groq.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
+            ],
+            max_tokens=1200,
+        )
         return resp.choices[0].message.content.strip()
 
     def _tong_hop(self, cau_hoi_goc: str, cac_ket_qua: dict) -> str:
         """Gọi Aggregator tổng hợp kết quả từ nhiều agent thành 1 câu trả lời."""
-        _sys, _usr = _gioi_han_prompt(AGGREGATOR_SYSTEM, build_aggregator_prompt(cau_hoi_goc, cac_ket_qua))
         resp = self.groq.chat.completions.create(
             model=LLM_MODEL,
             messages=[
-                {"role": "system", "content": _sys},
-                {"role": "user",   "content": _usr},
+                {"role": "system", "content": AGGREGATOR_SYSTEM},
+                {"role": "user",   "content": build_aggregator_prompt(cau_hoi_goc, cac_ket_qua)},
             ],
             max_tokens=1200,
         )
