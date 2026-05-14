@@ -59,8 +59,7 @@ log = logging.getLogger(__name__)
 
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
-LLM_MODEL        = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
-LLM_MODEL_SEARCH = "groq/compound-mini"             # tự search web khi không có data local
+LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
 EMBEDDING_MODEL = "intfloat/multilingual-e5-large"  # Groq Embeddings API — không cần load model local
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
@@ -865,9 +864,7 @@ class TuVanTuyenSinh:
         return "\n---\n".join(docs) if docs else "Không có dữ liệu liên quan trong hệ thống."
 
     def _chay_agent(self, ten_agent: str, cau_hoi: str) -> str:
-        """Chạy một specialist agent: tìm dữ liệu → ghép prompt → gọi LLM.
-        Nếu không có data local và agent là diem_chuan/truong/nganh → tự search web.
-        """
+        """Chạy một specialist agent: tìm dữ liệu → ghép prompt → gọi LLM."""
         cau_hinh = {
             "diem_chuan":   (DIEM_CHUAN_SYSTEM,   build_diem_chuan_prompt,   "diem_chuan"),
             "truong":       (TRUONG_SYSTEM,        build_truong_prompt,       "thong_tin_truong"),
@@ -888,50 +885,14 @@ class TuVanTuyenSinh:
         # Inject ngày giờ thực vào system prompt
         system_prompt_final = system_prompt.replace("{ngay_hom_nay}", _ngay_hom_nay())
 
-        # Nếu không có data local → thử web search
-        AGENT_CAN_SEARCH = {"diem_chuan", "truong", "nganh"}
-        khong_co_data = "Không có dữ liệu" in du_lieu
-        dung_web_search = khong_co_data and ten_agent in AGENT_CAN_SEARCH
-
-        if dung_web_search:
-            log.info(f"[{ten_agent}] Không có data local → dùng web search")
-            prompt_web = (f"{lich_su_text}\n" if lich_su_text else "") + (
-                f"Tìm kiếm thông tin mới nhất về tuyển sinh đại học Việt Nam để trả lời:\n\n"
-                f"{cau_hoi}\n\nTư vấn bằng tiếng Việt, xưng 'mình', gọi 'bạn'. "
-                f"Nêu rõ nguồn và năm nếu có thông tin điểm chuẩn."
-            )
-            try:
-                resp = self.groq.chat.completions.create(
-                    model=LLM_MODEL_SEARCH,
-                    messages=[
-                        {"role": "system", "content": system_prompt_final},
-                        {"role": "user",   "content": prompt_web},
-                    ],
-                    max_tokens=1200,
-                )
-            except Exception as e:
-                if "429" in str(e) or "rate_limit" in str(e):
-                    log.warning(f"[{ten_agent}] compound-mini rate limit → fallback model thường")
-                    import time; time.sleep(3)
-                    resp = self.groq.chat.completions.create(
-                        model=LLM_MODEL,
-                        messages=[
-                            {"role": "system", "content": system_prompt_final},
-                            {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
-                        ],
-                        max_tokens=1200,
-                    )
-                else:
-                    raise
-        else:
-            resp = self.groq.chat.completions.create(
-                model=LLM_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt_final},
-                    {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
-                ],
-                max_tokens=1200,
-            )
+        resp = self.groq.chat.completions.create(
+            model=LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt_final},
+                {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
+            ],
+            max_tokens=1200,
+        )
         return resp.choices[0].message.content.strip()
 
     def _tong_hop(self, cau_hoi_goc: str, cac_ket_qua: dict) -> str:
