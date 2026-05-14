@@ -5,8 +5,8 @@ uvicorn[standard]==0.32.1
 # AI / LLM
 groq==0.13.0
 
-# Vector DB
-chromadb==0.5.23
+# Vector DB — 0.6.0+ không bắt buộc onnxruntime khi dùng custom embeddings
+chromadb==0.6.3
 
 # Data
 pandas==2.2.3
