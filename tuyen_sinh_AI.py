@@ -469,9 +469,15 @@ def _tao_groq_client():
 
 
 def _embed(texts: list[str]) -> list[list[float]]:
-    """Tạo embedding dùng ChromaDB DefaultEmbeddingFunction (onnxruntime local, không cần API)."""
-    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
-    return DefaultEmbeddingFunction()(texts)
+    """Tạo embedding qua Groq API — không cần load model local."""
+    client = Groq(api_key=os.getenv("GROQ_API_KEY", GROQ_API_KEY))
+    BATCH = 96
+    all_embeddings = []
+    for i in range(0, len(texts), BATCH):
+        batch = texts[i:i+BATCH]
+        resp = client.embeddings.create(model=EMBEDDING_MODEL, input=batch)
+        all_embeddings.extend([e.embedding for e in resp.data])
+    return all_embeddings
 
 
 def _chunk_text(text: str) -> list[str]:
@@ -811,7 +817,7 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
                     else "Bạn xem ảnh này và tư vấn giúp mình nhé."
         })
 
-        system_prompt = system_prompt[:3000]  # giới hạn system prompt cho vision
+        system_prompt = system_prompt[:3000]
         resp = self.groq.chat.completions.create(
             model=VISION_MODEL,
             messages=[
@@ -861,7 +867,7 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
 
     def _tim_du_lieu(self, cau_hoi: str, loai_filter: str = None) -> str:
         """Tìm dữ liệu liên quan trong ChromaDB bằng vector search."""
-        query_vec = _embed(self.groq, [cau_hoi])[0]
+        query_vec = _embed([cau_hoi])[0]
         try:
             where   = {"loai": loai_filter} if loai_filter else None
             results = self.collection.query(
@@ -950,10 +956,7 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
                 ],
                 max_tokens=1200,
             )
-        docs = results.get("documents", [[]])[0]
-        if not docs:
-            return "Không có dữ liệu phù hợp."
-        return "\n---\n".join(docs)
+        return resp.choices[0].message.content.strip()
 
     def _tong_hop(self, cau_hoi_goc: str, cac_ket_qua: dict) -> str:
         """Gọi Aggregator tổng hợp kết quả từ nhiều agent thành 1 câu trả lời."""
