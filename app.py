@@ -83,7 +83,7 @@ def health_check():
 @app.get("/")
 def serve_frontend():
     """Serve giao diện chat."""
-    html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+    html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "index.html")
     return FileResponse(html_path, media_type="text/html")
 
 
