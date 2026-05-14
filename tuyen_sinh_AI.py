@@ -60,7 +60,7 @@ log = logging.getLogger(__name__)
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
 LLM_MODEL        = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
 LLM_MODEL_SEARCH = "groq/compound-mini"             # tự search web khi không có data local
-EMBEDDING_MODEL = "intfloat/multilingual-e5-large"  # Groq Embeddings API — không cần load model local
+EMBEDDING_MODEL = "nomic-embed-text-v1.5"  # Groq Embeddings API — không cần load model local
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
 # Đường dẫn tính từ vị trí file .py, không phụ thuộc thư mục đang chạy lệnh
@@ -431,8 +431,7 @@ Hãy tổng hợp thành một câu trả lời hoàn chỉnh, tự nhiên cho h
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _khoi_tao_chroma(reset: bool = False):
-    """Tạo hoặc mở ChromaDB collection, dùng DefaultEmbeddingFunction (onnxruntime local)."""
-    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+    """Tạo hoặc mở ChromaDB collection — dùng Groq Embeddings, không cần onnxruntime."""
     client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     if reset:
         try:
@@ -443,7 +442,6 @@ def _khoi_tao_chroma(reset: bool = False):
     collection = client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
-        embedding_function=DefaultEmbeddingFunction(),
     )
     log.info(f"Collection '{COLLECTION_NAME}' — {collection.count()} documents hiện có.")
     return collection
