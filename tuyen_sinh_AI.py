@@ -58,7 +58,8 @@ log = logging.getLogger(__name__)
 
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
-LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
+LLM_MODEL        = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
+LLM_MODEL_SEARCH = "groq/compound-mini"             # tự search web khi không có data local
 EMBEDDING_MODEL = "intfloat/multilingual-e5-large"  # Groq Embeddings API — không cần load model local
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
@@ -431,7 +432,6 @@ Hãy tổng hợp thành một câu trả lời hoàn chỉnh, tự nhiên cho h
 
 def _khoi_tao_chroma(reset: bool = False):
     """Tạo hoặc mở ChromaDB collection."""
-    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
     client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
     if reset:
         try:
@@ -442,7 +442,6 @@ def _khoi_tao_chroma(reset: bool = False):
     collection = client.get_or_create_collection(
         name=COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
-        embedding_function=DefaultEmbeddingFunction(),
     )
     log.info(f"Collection '{COLLECTION_NAME}' — {collection.count()} documents hiện có.")
     return collection
@@ -453,14 +452,21 @@ def _tao_groq_client():
     return Groq(api_key=os.getenv("GROQ_API_KEY", GROQ_API_KEY))
 
 
-def _embed(texts: list[str]) -> list[list[float]]:
+def _embed(groq_client: Groq, texts: list[str]) -> list[list[float]]:
     """
-    Tạo vector embedding dùng ChromaDB DefaultEmbeddingFunction (onnxruntime).
-    Không cần API key, chạy hoàn toàn local.
+    Gọi Groq Embeddings API để tạo vector cho danh sách văn bản.
+    Tự động chia batch nếu nhiều text (tối đa 96 text/lần).
     """
-    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
-    ef = DefaultEmbeddingFunction()
-    return ef(texts)
+    BATCH = 96
+    all_embeddings = []
+    for i in range(0, len(texts), BATCH):
+        batch = texts[i:i+BATCH]
+        resp = groq_client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=batch,
+        )
+        all_embeddings.extend([e.embedding for e in resp.data])
+    return all_embeddings
 
 
 def _chunk_text(text: str) -> list[str]:
@@ -492,7 +498,7 @@ def _chunk_text(text: str) -> list[str]:
 
 
 def _luu_vao_chroma(collection, groq_client, documents, metadatas, ids, ten_nguon):
-    """Embed documents rồi lưu vào ChromaDB theo batch."""
+    """Embed documents qua Groq API rồi lưu vào ChromaDB theo batch."""
     if not documents:
         return
     BATCH = 96
@@ -501,7 +507,7 @@ def _luu_vao_chroma(collection, groq_client, documents, metadatas, ids, ten_nguo
         batch_docs = documents[i:i+BATCH]
         batch_meta = metadatas[i:i+BATCH]
         batch_ids  = ids[i:i+BATCH]
-        embeddings = _embed(batch_docs)
+        embeddings = _embed(groq_client, batch_docs)
         collection.add(documents=batch_docs, embeddings=embeddings,
                        metadatas=batch_meta, ids=batch_ids)
     log.info(f"  Đã lưu {len(documents)} documents từ '{ten_nguon}'.")
@@ -664,7 +670,7 @@ def chay_ingest():
     print("  INGEST DỮ LIỆU TUYỂN SINH → CHROMADB")
     print("=" * 60)
 
-    import sys; reset = sys.stdin.isatty() and input("\nReset toàn bộ DB cũ? (y/N): ").strip().lower() == 'y'
+    reset = input("\nReset toàn bộ DB cũ? (y/N): ").strip().lower() == 'y'
     collection  = _khoi_tao_chroma(reset=reset)
     groq_client = _tao_groq_client()
     os.makedirs(EXCEL_DIR, exist_ok=True)
@@ -747,6 +753,62 @@ class TuVanTuyenSinh:
 
         return tra_loi
 
+    def hoi_voi_anh(self, cau_hoi: str, image_base64: str, image_type: str) -> str:
+        """
+        Xử lý câu hỏi kèm ảnh — dùng vision model của Groq.
+        Ảnh được encode base64 và gửi cùng text vào model llama-4-scout.
+        """
+        print(f"\n[Câu hỏi + Ảnh] {cau_hoi}")
+
+        VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+
+        # Ghép lịch sử hội thoại làm context
+        lich_su_text = ""
+        for msg in self.lich_su[-6:]:
+            prefix = "Bạn" if msg["role"] == "user" else "Mình"
+            lich_su_text += f"{prefix}: {msg['content']}\n"
+
+        system_prompt = """Bạn là AI tư vấn tuyển sinh đại học Việt Nam.
+Xưng "mình", gọi người hỏi là "bạn". Thân thiện, tự nhiên.
+Khi được gửi ảnh (học bạ, phiếu điểm, bảng điểm chuẩn...), hãy đọc và phân tích nội dung ảnh,
+sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
+
+        user_content = []
+        if lich_su_text:
+            user_content.append({
+                "type": "text",
+                "text": f"Lịch sử trò chuyện:\n{lich_su_text}\n\n"
+            })
+        user_content.append({
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{image_type};base64,{image_base64}"
+            }
+        })
+        user_content.append({
+            "type": "text",
+            "text": cau_hoi if cau_hoi and cau_hoi != "(Xem ảnh đính kèm)"
+                    else "Bạn xem ảnh này và tư vấn giúp mình nhé."
+        })
+
+        resp = self.groq.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user",   "content": user_content},
+            ],
+            max_tokens=1200,
+        )
+        tra_loi = resp.choices[0].message.content.strip()
+
+        # Lưu lịch sử
+        self.lich_su += [
+            {"role": "user",      "content": f"[Ảnh đính kèm] {cau_hoi}"},
+            {"role": "assistant", "content": tra_loi},
+        ]
+        self.lich_su = self.lich_su[-20:]
+        return tra_loi
+
     def reset_lich_su(self):
         """Xóa lịch sử — gọi khi người dùng bắt đầu hội thoại mới."""
         self.lich_su = []
@@ -777,7 +839,7 @@ class TuVanTuyenSinh:
 
     def _tim_du_lieu(self, cau_hoi: str, loai_filter: str = None) -> str:
         """Tìm dữ liệu liên quan trong ChromaDB bằng vector search."""
-        query_vec = _embed([cau_hoi])[0]
+        query_vec = _embed(self.groq, [cau_hoi])[0]
         try:
             where   = {"loai": loai_filter} if loai_filter else None
             results = self.collection.query(
@@ -790,7 +852,11 @@ class TuVanTuyenSinh:
         return "\n---\n".join(docs) if docs else "Không có dữ liệu liên quan trong hệ thống."
 
     def _chay_agent(self, ten_agent: str, cau_hoi: str) -> str:
-        """Chạy một specialist agent: tìm dữ liệu → ghép prompt → gọi LLM."""
+        """Chạy một specialist agent: tìm dữ liệu → ghép prompt → gọi LLM.
+        
+        Nếu không tìm thấy data trong ChromaDB và agent là diem_chuan/truong/nganh
+        → tự động dùng groq/compound-mini để search web thay thế.
+        """
         cau_hinh = {
             "diem_chuan":   (DIEM_CHUAN_SYSTEM,   build_diem_chuan_prompt,   "diem_chuan"),
             "truong":       (TRUONG_SYSTEM,        build_truong_prompt,       "thong_tin_truong"),
@@ -808,14 +874,39 @@ class TuVanTuyenSinh:
             prefix = "Bạn" if msg["role"] == "user" else "Mình"
             lich_su_text += f"{prefix}: {msg['content']}\n"
 
-        resp = self.groq.chat.completions.create(
-            model=LLM_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
-            ],
-            max_tokens=1200,
-        )
+        # Agent nào dùng data thực tế → fallback web search nếu trống
+        AGENT_CAN_SEARCH = {"diem_chuan", "truong", "nganh"}
+        khong_co_data = "Không có dữ liệu" in du_lieu
+        dung_web_search = khong_co_data and ten_agent in AGENT_CAN_SEARCH
+
+        if dung_web_search:
+            log.info(f"[{ten_agent}] Không có data local → dùng web search")
+            # Với compound-mini, prompt cần rõ ràng để model biết cần search
+            prompt_web = (
+                f"{lich_su_text}\n" if lich_su_text else ""
+            ) + (
+                f"Hãy tìm kiếm thông tin mới nhất trên web để trả lời câu hỏi sau "
+                f"về tuyển sinh đại học Việt Nam:\n\n{cau_hoi}\n\n"
+                f"Tư vấn bằng tiếng Việt, xưng 'mình', gọi 'bạn'. "
+                f"Nêu rõ nguồn và năm của thông tin điểm chuẩn nếu có."
+            )
+            resp = self.groq.chat.completions.create(
+                model=LLM_MODEL_SEARCH,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": prompt_web},
+                ],
+                max_tokens=1200,
+            )
+        else:
+            resp = self.groq.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
+                ],
+                max_tokens=1200,
+            )
         return resp.choices[0].message.content.strip()
 
     def _tong_hop(self, cau_hoi_goc: str, cac_ket_qua: dict) -> str:
