@@ -74,7 +74,7 @@ CHUNK_SIZE    = 500   # số ký tự mỗi đoạn văn
 CHUNK_OVERLAP = 50    # số ký tự chồng lấp giữa 2 đoạn liên tiếp
 
 # ── RAG ──────────────────────────────────────────────────────────────────────
-TOP_K_RESULTS = 5     # lấy 5 đoạn văn liên quan nhất khi tìm kiếm
+TOP_K_RESULTS = 3     # lấy 3 đoạn văn liên quan nhất khi tìm kiếm
 
 # ── Thư mục dữ liệu ──────────────────────────────────────────────────────────
 EXCEL_DIR = os.path.join(_BASE_DIR, "data", "excel")
@@ -874,6 +874,8 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
         }
         system_prompt, build_fn, loai_filter = cau_hinh[ten_agent]
         du_lieu = self._tim_du_lieu(cau_hoi, loai_filter)
+        if len(du_lieu) > 2000:
+            du_lieu = du_lieu[:2000] + "..."  # giới hạn để tránh vượt token limit
 
         lich_su_text = ""
         for msg in self.lich_su[-4:]:  # chỉ lấy 4 tin gần nhất
