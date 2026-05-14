@@ -5,13 +5,8 @@ uvicorn[standard]==0.32.1
 # AI / LLM
 groq==0.13.0
 
-# Embeddings — model all-MiniLM-L6-v2 chỉ ~50MB, không kéo torch GPU
-sentence-transformers==3.3.1
-torch==2.5.1+cpu  # bắt buộc chỉ dùng CPU build, nhẹ hơn nhiều
---extra-index-url https://download.pytorch.org/whl/cpu
-
 # Vector DB
-chromadb==0.6.3
+chromadb==0.5.23
 
 # Data
 pandas==2.2.3
