@@ -811,6 +811,7 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
                     else "Bạn xem ảnh này và tư vấn giúp mình nhé."
         })
 
+        system_prompt = system_prompt[:3000]  # giới hạn system prompt cho vision
         resp = self.groq.chat.completions.create(
             model=VISION_MODEL,
             messages=[
@@ -837,11 +838,12 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
 
     def _phan_loai(self, cau_hoi: str) -> tuple[list[str], str]:
         """Gọi Orchestrator → lấy danh sách agent cần dùng và câu hỏi thêm nếu có."""
+        _sys, _usr = _gioi_han_prompt(ORCHESTRATOR_SYSTEM, build_orchestrator_prompt(cau_hoi))
         resp = self.groq.chat.completions.create(
             model=LLM_MODEL,
             messages=[
-                {"role": "system", "content": ORCHESTRATOR_SYSTEM},
-                {"role": "user",   "content": build_orchestrator_prompt(cau_hoi)},
+                {"role": "system", "content": _sys},
+                {"role": "user",   "content": _usr},
             ],
             max_tokens=200,
         )
@@ -859,7 +861,7 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
 
     def _tim_du_lieu(self, cau_hoi: str, loai_filter: str = None) -> str:
         """Tìm dữ liệu liên quan trong ChromaDB bằng vector search."""
-        query_vec = _embed([cau_hoi])[0]
+        query_vec = _embed(self.groq, [cau_hoi])[0]
         try:
             where   = {"loai": loai_filter} if loai_filter else None
             results = self.collection.query(
@@ -913,11 +915,12 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
                 f"Nêu rõ nguồn và năm của thông tin điểm chuẩn nếu có."
             )
             try:
+                _sys2, _usr2 = _gioi_han_prompt(system_prompt, prompt_web)
                 resp = self.groq.chat.completions.create(
                     model=LLM_MODEL_SEARCH,
                     messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user",   "content": prompt_web},
+                        {"role": "system", "content": _sys2},
+                        {"role": "user",   "content": _usr2},
                     ],
                     max_tokens=1200,
                 )
@@ -947,15 +950,19 @@ sau đó tư vấn phù hợp dựa trên thông tin trong ảnh."""
                 ],
                 max_tokens=1200,
             )
-        return resp.choices[0].message.content.strip()
+        docs = results.get("documents", [[]])[0]
+        if not docs:
+            return "Không có dữ liệu phù hợp."
+        return "\n---\n".join(docs)
 
     def _tong_hop(self, cau_hoi_goc: str, cac_ket_qua: dict) -> str:
         """Gọi Aggregator tổng hợp kết quả từ nhiều agent thành 1 câu trả lời."""
+        _sys, _usr = _gioi_han_prompt(AGGREGATOR_SYSTEM, build_aggregator_prompt(cau_hoi_goc, cac_ket_qua))
         resp = self.groq.chat.completions.create(
             model=LLM_MODEL,
             messages=[
-                {"role": "system", "content": AGGREGATOR_SYSTEM},
-                {"role": "user",   "content": build_aggregator_prompt(cau_hoi_goc, cac_ket_qua)},
+                {"role": "system", "content": _sys},
+                {"role": "user",   "content": _usr},
             ],
             max_tokens=1200,
         )
