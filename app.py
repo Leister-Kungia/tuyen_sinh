@@ -76,11 +76,11 @@ class ResetRequest(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     return {"status": "ok", "message": "AI Tư Vấn Tuyển Sinh đang chạy 🎓"}
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def serve_frontend():
     """Serve giao diện chat."""
     html_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "index.html")
