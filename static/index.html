@@ -495,12 +495,15 @@
     }
 
     .logo-board {
-      min-height: 100%;
-      display: grid;
-      place-items: center;
+      min-height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: linear-gradient(180deg, rgba(31,58,95,0.03), rgba(46,196,182,0.07));
       border-radius: 26px;
-      padding: 30px;
+      padding: 28px 20px;
+      overflow: hidden;
+      margin-top: 16px;
     }
 
     .mockup {
@@ -1244,7 +1247,6 @@
         <a href="#chat-section">Trò chuyện AI</a>
         <a href="#workflow">Quy trình</a>
         <a href="#brand">Branding</a>
-        <a href="#pricing">Gói dịch vụ</a>
         <a href="#faq">FAQ</a>
       </nav>
 
@@ -1552,21 +1554,19 @@
             Biểu tượng kết hợp <strong>la bàn</strong> với <strong>bong bóng chat</strong>. La bàn thể hiện định hướng tuyển sinh, còn chat bubble đại diện cho trợ lý AI. Dáng logo đủ đơn giản để dùng cho header, favicon, avatar social và app icon.
           </p>
           <div class="logo-board">
-            <svg width="100%" viewBox="0 0 720 280" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Magerok logo showcase">
-              <rect width="720" height="280" rx="28" fill="url(#bgGrad)"/>
-              <rect x="44" y="44" width="192" height="192" rx="46" fill="#1F3A5F"/>
-              <circle cx="140" cy="140" r="64" stroke="white" stroke-width="8" opacity="0.95"/>
-              <path d="M140 104L157 140L140 176L123 140L140 104Z" fill="#2EC4B6" stroke="white" stroke-width="6"/>
-              <path d="M102 196L82 224L122 216L102 196Z" fill="white" opacity="0.96"/>
-              <text x="278" y="126" fill="#1F3A5F" style="font: 700 62px Inter, Arial, sans-serif; letter-spacing: -0.04em;">Magerok</text>
-              <text x="282" y="168" fill="#4E7FB6" style="font: 500 24px Inter, Arial, sans-serif; letter-spacing: 0.02em;">AI tuyển sinh cá nhân hóa</text>
-              <defs>
-                <linearGradient id="bgGrad" x1="0" y1="0" x2="720" y2="280" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#F7FBFF"/>
-                  <stop offset="1" stop-color="#F3EBDD"/>
-                </linearGradient>
-              </defs>
-            </svg>
+            <div style="display:flex;align-items:center;gap:24px;">
+              <div style="width:80px;height:80px;border-radius:22px;background:#1F3A5F;display:grid;place-items:center;flex:0 0 80px;box-shadow:0 10px 24px rgba(31,58,95,0.22);">
+                <svg width="48" height="48" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="32" cy="32" r="24" stroke="white" stroke-width="3.5" opacity="0.9"/>
+                  <path d="M32 14L38.5 32L32 50L25.5 32L32 14Z" fill="#2EC4B6" stroke="white" stroke-width="2.8"/>
+                  <path d="M24 54L16 62L28 59.5L24 54Z" fill="white" opacity="0.92"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-size:36px;font-weight:800;letter-spacing:-0.04em;color:var(--navy);line-height:1;">Magerok</div>
+                <div style="font-size:15px;color:var(--blue);margin-top:6px;font-weight:500;">AI tuyển sinh cá nhân hóa</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1601,46 +1601,7 @@
       </div>
     </section>
 
-    <section class="container reveal">
-      <div class="section-head">
-        <div>
-          <h2>Mockup cấu trúc trang con</h2>
-          <p>Không chỉ landing page, bộ HTML này còn định hướng sẵn các trang con quan trọng nếu bạn muốn phát triển thành sản phẩm thật.</p>
-        </div>
-      </div>
-      <div class="cards-3">
-        <div class="mockup">
-          <div class="mockup-header"><span style="width:10px;height:10px;border-radius:999px;background:#ff6b6b"></span><span style="width:10px;height:10px;border-radius:999px;background:#ffd166"></span><span style="width:10px;height:10px;border-radius:999px;background:#06d6a0"></span></div>
-          <div class="mockup-body">
-            <strong style="color:var(--navy);font-size:18px;">Trang tra cứu trường</strong>
-            <div class="mockup-line" style="width:78%"></div>
-            <div class="mockup-line" style="width:92%"></div>
-            <div class="mockup-line" style="width:70%"></div>
-            <div class="mockup-line" style="height:110px;border-radius:20px"></div>
-          </div>
-        </div>
-        <div class="mockup">
-          <div class="mockup-header"><span style="width:10px;height:10px;border-radius:999px;background:#ff6b6b"></span><span style="width:10px;height:10px;border-radius:999px;background:#ffd166"></span><span style="width:10px;height:10px;border-radius:999px;background:#06d6a0"></span></div>
-          <div class="mockup-body">
-            <strong style="color:var(--navy);font-size:18px;">Trang so sánh ngành</strong>
-            <div class="mockup-line" style="width:86%"></div>
-            <div class="mockup-line" style="height:44px;border-radius:14px"></div>
-            <div class="mockup-line" style="height:44px;border-radius:14px"></div>
-            <div class="mockup-line" style="height:44px;border-radius:14px"></div>
-          </div>
-        </div>
-        <div class="mockup">
-          <div class="mockup-header"><span style="width:10px;height:10px;border-radius:999px;background:#ff6b6b"></span><span style="width:10px;height:10px;border-radius:999px;background:#ffd166"></span><span style="width:10px;height:10px;border-radius:999px;background:#06d6a0"></span></div>
-          <div class="mockup-body">
-            <strong style="color:var(--navy);font-size:18px;">Dashboard hồ sơ</strong>
-            <div class="mockup-line" style="width:74%"></div>
-            <div class="mockup-line" style="height:110px;border-radius:20px"></div>
-            <div class="mockup-line" style="width:90%"></div>
-            <div class="mockup-line" style="width:68%"></div>
-          </div>
-        </div>
-      </div>
-    </section>
+
 
     <section class="container reveal">
       <div class="section-head">
@@ -1665,46 +1626,7 @@
       </div>
     </section>
 
-    <section id="pricing" class="container reveal">
-      <div class="section-head">
-        <div>
-          <h2>Gợi ý gói dịch vụ cho mô hình kinh doanh</h2>
-          <p>Nếu bạn muốn Magerok không chỉ là công cụ miễn phí mà còn có doanh thu, đây là cấu trúc gói dịch vụ phù hợp.</p>
-        </div>
-      </div>
-      <div class="pricing">
-        <article class="card">
-          <h3>Free Explorer</h3>
-          <p>Dùng để kéo traffic và cho người dùng làm quen với AI tuyển sinh.</p>
-          <ul>
-            <li>Hỏi đáp cơ bản</li>
-            <li>Gợi ý ngành sơ bộ</li>
-            <li>Xem vài trường phù hợp</li>
-            <li>CTA nâng cấp / để lại lead</li>
-          </ul>
-        </article>
-        <article class="card highlight">
-          <h3>Smart Guidance</h3>
-          <p>Gói phù hợp nhất cho học sinh lớp 11–12 muốn có định hướng rõ ràng.</p>
-          <ul>
-            <li>Phân tích ngành & trường sâu hơn</li>
-            <li>Timeline hồ sơ cá nhân hóa</li>
-            <li>Nhắc deadline và checklist</li>
-            <li>So sánh trường nhiều tiêu chí</li>
-          </ul>
-        </article>
-        <article class="card">
-          <h3>Premium Counseling</h3>
-          <p>Dành cho mô hình kết hợp AI + cố vấn thật hoặc upsell dịch vụ hỗ trợ hồ sơ.</p>
-          <ul>
-            <li>Review hồ sơ</li>
-            <li>Gợi ý chiến lược ứng tuyển</li>
-            <li>Ưu tiên hỗ trợ chuyên gia</li>
-            <li>Theo dõi hành trình cá nhân</li>
-          </ul>
-        </article>
-      </div>
-    </section>
+
 
     <section id="faq" class="container reveal">
       <div class="section-head">
