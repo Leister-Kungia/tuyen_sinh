@@ -8,6 +8,9 @@ groq==0.13.0
 # Vector DB
 chromadb==0.5.23
 
+# Auth
+supabase==2.10.0
+
 # Data
 pandas==2.2.3
 openpyxl==3.1.5
