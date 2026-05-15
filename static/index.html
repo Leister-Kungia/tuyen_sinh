@@ -1723,8 +1723,8 @@
     /* =========================================
        SUPABASE AUTH
     ========================================= */
-    const SUPABASE_URL  = 'https://YOUR_PROJECT.supabase.co'; // ← đổi
-    const SUPABASE_ANON = 'YOUR_ANON_KEY';                    // ← đổi
+    const SUPABASE_URL  = 'https://gwduxjcxrnlytodandco.supabase.co'; // ← đổi
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3ZHV4amN4cm5seXRvZGFuZGNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4MTYwODAsImV4cCI6MjA5NDM5MjA4MH0.hAzwFJa68wFKtfyB9TKHXg-jWXt_4pCHN7gzvYyss7c';                    // ← đổi
     const { createClient } = supabase;
     const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -1932,9 +1932,7 @@ Phong cách trả lời:
       document.getElementById('sendBtn').disabled = true;
 
       try {
-        // Build API messages
-        const apiMessages = buildApiMessages(currentConv.messages);
-        const response = await callClaudeAPI(apiMessages);
+        const response = await callGroqBackend(currentConv.messages);
         removeTyping(typingId);
 
         // Render streaming
@@ -1981,47 +1979,14 @@ Phong cách trả lời:
       renderHistory();
     }
 
-    function buildApiMessages(messages) {
-      return messages.map(msg => {
-        if (msg.role === 'assistant') {
-          return { role: 'assistant', content: msg.content };
-        }
-        // user message
-        const contentParts = [];
-        if (msg.fileInfo) {
-          const fi = msg.fileInfo;
-          if (fi.mediaType === 'application/pdf') {
-            contentParts.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fi.base64 } });
-          } else if (fi.mediaType.startsWith('image/')) {
-            contentParts.push({ type: 'image', source: { type: 'base64', media_type: fi.mediaType, data: fi.base64 } });
-          } else {
-            // For doc/txt: include as text note
-            contentParts.push({ type: 'text', text: `[File đính kèm: ${fi.name}]` });
-          }
-        }
-        if (msg.content) {
-          contentParts.push({ type: 'text', text: msg.content });
-        }
-        return { role: 'user', content: contentParts.length === 1 && contentParts[0].type === 'text' ? contentParts[0].text : contentParts };
-      });
-    }
 
-    async function callClaudeAPI(messages) {
-      // Lấy câu hỏi cuối cùng của user
+    async function callGroqBackend(messages) {
+      // Lấy tin nhắn cuối của user
       const lastUser = [...messages].reverse().find(m => m.role === 'user');
-      const cau_hoi = (typeof lastUser?.content === 'string')
-        ? lastUser.content
-        : lastUser?.content?.find?.(c => c.type === 'text')?.text || '';
-
-      // Kiểm tra có ảnh không
-      let image_base64 = null, image_type = null;
-      if (lastUser?.content && Array.isArray(lastUser.content)) {
-        const img = lastUser.content.find(c => c.type === 'image');
-        if (img) {
-          image_base64 = img.source?.data;
-          image_type   = img.source?.media_type;
-        }
-      }
+      const cau_hoi = lastUser?.content || '';
+      const image_base64 = lastUser?.fileInfo?.mediaType?.startsWith('image/')
+        ? lastUser.fileInfo.base64 : null;
+      const image_type = lastUser?.fileInfo?.mediaType || 'image/jpeg';
 
       const headers = { 'Content-Type': 'application/json' };
       if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
