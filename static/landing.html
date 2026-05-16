@@ -6,7 +6,6 @@
 
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Magerok — AI Tư Vấn Tuyển Sinh</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -123,61 +122,26 @@ footer{border-top:1px solid var(--line);padding:28px 2rem;
   footer{flex-direction:column;gap:8px;text-align:center}
 }
 
-/* ── Live Chat Widget ── */
-.chat-widget{
-  max-width:720px;width:100%;margin:0 auto;
-  background:#fff;border-radius:var(--radius);
-  box-shadow:var(--shadow);border:1px solid var(--line);
-  overflow:hidden;display:flex;flex-direction:column;height:480px;
-}
-.cw-bar{
-  background:linear-gradient(135deg,var(--navy),var(--blue));
-  padding:14px 20px;display:flex;align-items:center;gap:10px;flex-shrink:0;
-}
-.cw-dot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35)}
-.cw-title{color:#fff;font-size:13px;font-weight:500;margin-left:4px;flex:1}
-.cw-login-hint{color:rgba(255,255,255,.75);font-size:12px}
-.cw-login-hint a{color:#2EC4B6;font-weight:600;text-decoration:none}
-.cw-msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;
-  background:#f8fafc;}
-.cw-msgs::-webkit-scrollbar{width:4px}
-.cw-msgs::-webkit-scrollbar-thumb{background:rgba(31,58,95,.15);border-radius:2px}
-.cw-row{display:flex;gap:9px;align-items:flex-end}
-.cw-row.user{flex-direction:row-reverse}
-.cw-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+
+/* CHAT PREVIEW */
+.preview-wrap{max-width:680px;width:100%;margin:0 auto;
+  background:var(--card);border-radius:var(--radius);
+  box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden}
+.preview-bar{background:linear-gradient(135deg,var(--navy),var(--blue));
+  padding:14px 20px;display:flex;align-items:center;gap:10px}
+.preview-bar-dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.3)}
+.preview-bar-title{color:#fff;font-size:13px;font-weight:500;margin-left:4px}
+.preview-msgs{padding:20px;display:flex;flex-direction:column;gap:12px}
+.pmsg{display:flex;gap:10px;align-items:flex-end}
+.pmsg.user{flex-direction:row-reverse}
+.pavatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
   justify-content:center;font-size:13px;flex-shrink:0}
-.cw-av.bot{background:linear-gradient(135deg,var(--navy),var(--blue))}
-.cw-av.user{background:linear-gradient(135deg,var(--teal),var(--teal-dark))}
-.cw-bbl{max-width:78%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;word-break:break-word}
-.cw-bbl.bot{background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px;color:var(--text)}
-.cw-bbl.user{background:linear-gradient(135deg,var(--teal),var(--teal-dark));color:#fff;border-bottom-right-radius:4px}
-.cw-bbl.bot .md-content h1,.cw-bbl.bot .md-content h2,.cw-bbl.bot .md-content h3{font-size:14px;font-weight:600;margin:8px 0 4px;color:var(--navy)}
-.cw-bbl.bot .md-content ul,.cw-bbl.bot .md-content ol{padding-left:16px;margin:4px 0}
-.cw-bbl.bot .md-content p{margin:3px 0}
-.cw-bbl.bot .md-content strong{color:var(--navy)}
-.cw-typing{display:flex;gap:5px;align-items:center;padding:6px 2px}
-.cw-typing span{width:7px;height:7px;border-radius:50%;background:var(--teal);
-  animation:cw-bounce 1.2s ease-in-out infinite}
-.cw-typing span:nth-child(2){animation-delay:.2s}
-.cw-typing span:nth-child(3){animation-delay:.4s}
-@keyframes cw-bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
-.cw-footer{border-top:1px solid var(--line);padding:12px 14px;
-  display:flex;gap:8px;align-items:flex-end;background:#fff;flex-shrink:0}
-.cw-input{flex:1;border:1.5px solid var(--line);border-radius:12px;
-  padding:9px 13px;font-size:13.5px;font-family:inherit;resize:none;
-  max-height:100px;min-height:38px;outline:none;transition:border .2s;color:var(--text)}
-.cw-input:focus{border-color:var(--teal)}
-.cw-send{width:38px;height:38px;border-radius:10px;border:none;
-  background:linear-gradient(135deg,var(--teal),var(--teal-dark));
-  color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;transition:all .2s}
-.cw-send:hover{opacity:.85;transform:scale(1.05)}
-.cw-send:disabled{opacity:.4;cursor:not-allowed;transform:none}
-.cw-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 18px 0;flex-shrink:0;background:#f8fafc}
-.cw-chip{border:1px solid var(--teal);border-radius:100px;padding:5px 12px;
-  font-size:12px;color:var(--teal-dark);cursor:pointer;background:#fff;
-  transition:all .2s;white-space:nowrap}
-.cw-chip:hover{background:var(--teal);color:#fff}
+.pavatar.bot{background:linear-gradient(135deg,var(--navy),var(--blue))}
+.pavatar.user{background:linear-gradient(135deg,var(--teal),var(--teal-dark))}
+.pbubble{max-width:75%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.55}
+.pbubble.bot{background:#f0f4f8;color:var(--text);border-bottom-left-radius:4px}
+.pbubble.user{background:linear-gradient(135deg,var(--teal),var(--teal-dark));
+  color:#fff;border-bottom-right-radius:4px}
 </style>
 </head>
 <body>
@@ -194,7 +158,7 @@ footer{border-top:1px solid var(--line);padding:28px 2rem;
     Magerok
   </div>
   <div class="nav-actions">
-    <a href="#cw" class="btn-outline" onclick="document.getElementById('cw').scrollIntoView({behavior:'smooth'});return false">Thử ngay</a>
+    <a href="/demo" class="btn-outline">Dùng thử miễn phí</a>
     <a href="/login" class="btn-primary">Đăng nhập</a>
   </div>
 </nav>
@@ -204,138 +168,38 @@ footer{border-top:1px solid var(--line);padding:28px 2rem;
   <div class="badge">AI Tư Vấn Tuyển Sinh Đại Học</div>
   <h1>Chọn đúng ngành,<br><span>bước đúng hướng</span></h1>
   <p class="hero-sub">Magerok giúp bạn tra cứu điểm chuẩn, so sánh ngành học và định hướng nghề nghiệp — nhanh, chính xác, thân thiện.</p>
-  <div style="display:flex;gap:12px;justify-content:center;margin-bottom:36px;flex-wrap:wrap">
-    <a href="/login" class="btn-hero-outline">Đăng nhập để lưu lịch sử →</a>
+  <div class="hero-btns">
+    <a href="/demo" class="btn-hero-primary">🚀 Dùng thử ngay — Miễn phí</a>
+    <a href="/login" class="btn-hero-outline">Đăng nhập để lưu lịch sử</a>
   </div>
 
-  <!-- Live Chat Widget -->
-  <div class="chat-widget" id="cw">
-    <div class="cw-bar">
-      <div class="cw-dot"></div><div class="cw-dot"></div><div class="cw-dot"></div>
-      <span class="cw-title">🎓 Magerok AI · Thử ngay</span>
-      <span class="cw-login-hint"><a href="/login">Đăng nhập</a> để lưu lịch sử</span>
+  <!-- Chat preview tĩnh -->
+  <div class="preview-wrap">
+    <div class="preview-bar">
+      <div class="preview-bar-dot"></div>
+      <div class="preview-bar-dot"></div>
+      <div class="preview-bar-dot"></div>
+      <span class="preview-bar-title">Magerok AI · Đang hoạt động</span>
     </div>
-    <div class="cw-chips" id="cw-chips">
-      <button class="cw-chip" onclick="cwChip(this)">📊 Điểm chuẩn Bách Khoa 2024?</button>
-      <button class="cw-chip" onclick="cwChip(this)">🎯 Ngành CNTT học gì?</button>
-      <button class="cw-chip" onclick="cwChip(this)">🏫 Trường Y tốt nhất HN?</button>
-      <button class="cw-chip" onclick="cwChip(this)">💼 Kinh tế hay Kế toán?</button>
-    </div>
-    <div class="cw-msgs" id="cw-msgs">
-      <div class="cw-row">
-        <div class="cw-av bot">🎓</div>
-        <div class="cw-bbl bot">
-          <div class="md-content">Xin chào! 👋 Mình là Magerok AI — trợ lý tư vấn tuyển sinh. Bạn muốn hỏi gì nào?</div>
-        </div>
+    <div class="preview-msgs">
+      <div class="pmsg user">
+        <div class="pavatar user">🙋</div>
+        <div class="pbubble user">Điểm chuẩn ngành CNTT Bách Khoa HN 2024 là bao nhiêu?</div>
+      </div>
+      <div class="pmsg">
+        <div class="pavatar bot">🎓</div>
+        <div class="pbubble bot">Năm 2024, điểm chuẩn ngành <strong>Khoa học Máy tính</strong> tại Bách Khoa HN là <strong>28.04</strong> điểm (tổ hợp A00) 📊<br><br>Bạn đang thi tổ hợp nào để mình tư vấn kỹ hơn nhé?</div>
+      </div>
+      <div class="pmsg user">
+        <div class="pavatar user">🙋</div>
+        <div class="pbubble user">Mình thi A00, được 27 điểm</div>
+      </div>
+      <div class="pmsg">
+        <div class="pavatar bot">🎓</div>
+        <div class="pbubble bot">27 điểm A00 thì <strong>sát điểm chuẩn</strong> năm 2024 rồi đó 🎯 Mình gợi ý thêm vài trường an toàn hơn nhé...</div>
       </div>
     </div>
-    <div class="cw-footer">
-      <textarea class="cw-input" id="cw-input" rows="1" placeholder="Nhập câu hỏi của bạn..."
-        onkeydown="cwKey(event)" oninput="cwResize(this)"></textarea>
-      <button class="cw-send" id="cw-send" onclick="cwSend()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
-        </svg>
-      </button>
-    </div>
   </div>
-</section>
-
-<script>
-marked.setOptions({ breaks:true, gfm:true, headerIds:false, mangle:false });
-let cwBusy = false;
-
-function cwChip(btn) {
-  document.getElementById('cw-input').value = btn.textContent.replace(/^[^\s]+\s/,'');
-  document.getElementById('cw-chips').style.display = 'none';
-  cwSend();
-}
-function cwKey(e) {
-  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); cwSend(); }
-}
-function cwResize(el) {
-  el.style.height='auto';
-  el.style.height=Math.min(el.scrollHeight,100)+'px';
-}
-
-function cwAddMsg(role, text) {
-  const box = document.getElementById('cw-msgs');
-  const row = document.createElement('div');
-  row.className = 'cw-row ' + (role==='user'?'user':'');
-  const av = document.createElement('div');
-  av.className = 'cw-av ' + (role==='user'?'user':'bot');
-  av.textContent = role==='user' ? '🙋' : '🎓';
-  const bbl = document.createElement('div');
-  bbl.className = 'cw-bbl ' + (role==='user'?'user':'bot');
-  if (role==='bot') {
-    const md = document.createElement('div');
-    md.className = 'md-content';
-    bbl.appendChild(md);
-  } else {
-    bbl.textContent = text;
-  }
-  row.appendChild(av); row.appendChild(bbl);
-  box.appendChild(row);
-  box.scrollTop = box.scrollHeight;
-  return bbl;
-}
-
-function cwTyping() {
-  const box = document.getElementById('cw-msgs');
-  const row = document.createElement('div');
-  row.className = 'cw-row'; row.id = 'cw-typing';
-  const av = document.createElement('div');
-  av.className = 'cw-av bot'; av.textContent = '🎓';
-  const bbl = document.createElement('div');
-  bbl.className = 'cw-bbl bot';
-  bbl.innerHTML = '<div class="cw-typing"><span></span><span></span><span></span></div>';
-  row.appendChild(av); row.appendChild(bbl);
-  box.appendChild(row); box.scrollTop = box.scrollHeight;
-}
-
-async function cwSend() {
-  if (cwBusy) return;
-  const input = document.getElementById('cw-input');
-  const text = input.value.trim();
-  if (!text) return;
-  document.getElementById('cw-chips').style.display = 'none';
-  input.value = ''; input.style.height = 'auto';
-  cwAddMsg('user', text);
-  cwTyping();
-  const btn = document.getElementById('cw-send');
-  btn.disabled = true; cwBusy = true;
-  try {
-    const res = await fetch('/demo/hoi', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cau_hoi: text })
-    });
-    document.getElementById('cw-typing')?.remove();
-    if (!res.ok) throw new Error('Lỗi server');
-    const data = await res.json();
-    const bbl = cwAddMsg('bot', '');
-    const md = bbl.querySelector('.md-content');
-    const words = (data.tra_loi||'').split(' ');
-    let rendered = '';
-    await new Promise(resolve => {
-      let i = 0;
-      function step() {
-        if (i >= words.length) { resolve(); return; }
-        rendered += (i===0?'':' ') + words[i++];
-        md.innerHTML = marked.parse(rendered);
-        document.getElementById('cw-msgs').scrollTop = 999999;
-        setTimeout(step, 18);
-      }
-      step();
-    });
-  } catch(e) {
-    document.getElementById('cw-typing')?.remove();
-    cwAddMsg('bot', '⚠️ Có lỗi xảy ra, vui lòng thử lại.');
-  } finally {
-    btn.disabled = false; cwBusy = false;
-  }
-}
-</script>
 
 <!-- FEATURES -->
 <section class="section">
@@ -393,7 +257,7 @@ async function cwSend() {
           <li class="no">Xem lại cuộc trò chuyện cũ</li>
           <li class="no">Đồng bộ nhiều thiết bị</li>
         </ul>
-        <a href="#cw" class="btn-hero-outline" style="display:block;text-align:center" onclick="document.getElementById('cw').scrollIntoView({behavior:'smooth'});return false">Thử ngay bên trên ↑</a>
+        <a href="/demo" class="btn-hero-outline" style="display:block;text-align:center">Dùng thử ngay</a>
       </div>
       <div class="compare-card featured">
         <div class="featured-badge">⭐ Đầy đủ tính năng</div>
@@ -419,7 +283,7 @@ async function cwSend() {
     <h2>Bắt đầu ngay hôm nay 🎓</h2>
     <p>Hàng nghìn học sinh đã dùng Magerok để chọn đúng ngành, đúng trường. Đến lượt bạn!</p>
     <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-      <a href="#cw" class="btn-hero-primary" onclick="document.getElementById('cw').scrollIntoView({behavior:'smooth'});return false">🚀 Thử ngay miễn phí</a>
+      <a href="/demo" class="btn-hero-primary">🚀 Dùng thử miễn phí</a>
       <a href="/login" class="btn-hero-outline">Đăng nhập</a>
     </div>
   </div>
