@@ -1732,31 +1732,39 @@
     let accessToken = null;
 
     // Kiểm tra auth khi load trang
-    let _authReady = false;
-
     async function initAuth() {
-      // onAuthStateChange là nguồn duy nhất — xử lý cả hash OAuth lẫn session thường
-      sb.auth.onAuthStateChange((_event, session) => {
-        if (_event === 'SIGNED_OUT') {
+      // Bước 1: Nếu URL có hash OAuth → parse thủ công trước
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        try {
+          const params = new URLSearchParams(window.location.hash.slice(1));
+          const access_token  = params.get('access_token');
+          const refresh_token = params.get('refresh_token');
+          if (access_token) {
+            await sb.auth.setSession({ access_token, refresh_token });
+          }
+        } catch(e) { console.warn('setSession error:', e); }
+        history.replaceState(null, '', window.location.pathname);
+      }
+
+      // Bước 2: Lấy session sau khi đã parse hash xong
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) {
+        window.location.href = '/static/login.html';
+        return;
+      }
+      currentUser = session.user;
+      accessToken = session.access_token;
+      const nameEl = document.getElementById('user-display-name');
+      if (nameEl) nameEl.textContent = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Bạn';
+
+      // Bước 3: Lắng nghe thay đổi session (refresh token, logout)
+      sb.auth.onAuthStateChange((_event, newSession) => {
+        if (_event === 'SIGNED_OUT' || !newSession) {
           window.location.href = '/static/login.html';
-          return;
-        }
-        if (session) {
-          currentUser = session.user;
-          accessToken = session.access_token;
-          if (window.location.hash) history.replaceState(null, '', window.location.pathname);
-          const nameEl = document.getElementById('user-display-name');
-          if (nameEl) nameEl.textContent = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Bạn';
-          _authReady = true;
-        } else if (_authReady) {
-          window.location.href = '/static/login.html';
+        } else {
+          accessToken = newSession.access_token;
         }
       });
-
-      // Sau 4 giây không có session → về login
-      setTimeout(() => {
-        if (!_authReady) window.location.href = '/static/login.html';
-      }, 4000);
     }
     initAuth();
 
