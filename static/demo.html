@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='64' height='64' rx='14' fill='%231F3A5F'/%3E%3Ccircle cx='32' cy='30' r='21' stroke='white' stroke-width='3' opacity='.9'/%3E%3Cpath d='M32 13L40 30L32 47L24 30Z' fill='%232EC4B6'/%3E%3Cpath d='M32 13L40 30L32 47L24 30Z' stroke='white' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M26 49L20 58L32 55L26 49Z' fill='white' opacity='.9'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox=\'0 0 64 64\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Crect width=\'64\' height=\'64\' rx=\'14\' fill=\'%231F3A5F\'/%3E%3Ccircle cx=\'32\' cy=\'30\' r=\'21\' stroke=\'white\' stroke-width=\'3\' opacity=\'.9\'/%3E%3Cpath d=\'M32 13L40 30L32 47L24 30Z\' fill=\'%232EC4B6\'/%3E%3Cpath d=\'M26 49L20 58L32 55L26 49Z\' fill=\'white\' opacity=\'.9\'/%3E%3C/svg%3E">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dùng thử · Magerok — AI tư vấn tuyển sinh cá nhân hóa</title>
   <meta name="description" content="Magerok là website AI tư vấn tuyển sinh giúp học sinh và phụ huynh chọn ngành, chọn trường, theo dõi deadline, tìm học bổng và xây lộ trình hồ sơ." />
@@ -1236,9 +1236,10 @@
       <a href="#top" class="brand" aria-label="Magerok home">
         <div class="brand-mark" aria-hidden="true">
           <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="32" cy="30" r="22" stroke="white" stroke-width="3" opacity="0.92"/>
-            <path d="M32 16L39 30L32 44L25 30Z" fill="#2EC4B6" stroke="white" stroke-width="2"/>
-            <path d="M24 47L18 56L30 53Z" fill="white" opacity="0.92"/>
+            <circle cx="32" cy="30" r="21" stroke="white" stroke-width="3" opacity="0.9"/>
+            <path d="M32 13L40 30L32 47L24 30Z" fill="#2EC4B6"/>
+            <path d="M32 13L40 30L32 47L24 30Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M26 49L20 58L32 55L26 49Z" fill="white" opacity="0.9"/>
           </svg>
         </div>
         <div class="brand-text">
@@ -1263,7 +1264,224 @@
   </header>
 
   <main id="top">
-    
+    <section class="hero container">
+      <div class="hero-grid">
+        <div class="reveal visible">
+          <div class="badge">Compass Chat Identity · Academic + Friendly + AI</div>
+          <h1>Magerok giúp học sinh chọn đúng ngành, đúng trường, đúng lộ trình.</h1>
+          <p>
+            Đây là landing page HTML hoàn chỉnh cho một nền tảng AI tư vấn tuyển sinh. Giao diện được thiết kế theo phong cách đáng tin cậy, thân thiện và hiện đại để bạn có thể gắn chatbot hoặc API AI vào ngay mà không cần làm lại phần "vỏ" sản phẩm.
+          </p>
+          <div class="hero-cta">
+            <a href="#chat-section" class="btn btn-primary">Trò chuyện với AI</a>
+            <a href="#brand" class="btn btn-secondary">Xem logo & style guide</a>
+          </div>
+          <div class="quick-actions">
+            <span class="chip" onclick="insertAndSend('Mình học giỏi Toán, thích lĩnh vực công nghệ. Gợi ý ngành phù hợp cho mình?')">Chọn ngành phù hợp</span>
+            <span class="chip" onclick="insertAndSend('So sánh ĐH Bách Khoa và ĐH FPT cho ngành Công nghệ thông tin?')">So sánh trường</span>
+            <span class="chip" onclick="insertAndSend('Học bổng nào phù hợp cho học sinh lớp 12 GPA 8.5 muốn du học?')">Tìm học bổng</span>
+            <span class="chip" onclick="insertAndSend('Lập timeline nộp hồ sơ đại học trong 3 tháng tới cho mình?')">Theo dõi deadline</span>
+            <span class="chip" onclick="insertAndSend('Hồ sơ tuyển sinh cần chuẩn bị những gì?')">Đánh giá hồ sơ</span>
+          </div>
+        </div>
+
+        <div class="hero-panel reveal">
+          <div class="panel-glow"></div>
+          <div class="assistant-window">
+            <div class="assistant-top">
+              <span>Magerok AI Assistant</span>
+              <span>Online · 24/7</span>
+            </div>
+            <div class="assistant-body">
+              <div class="bubble ai">Chào bạn 👋 Mình có thể giúp chọn ngành phù hợp, lọc trường theo học lực, gợi ý học bổng, nhắc deadline và xây lộ trình nộp hồ sơ.</div>
+              <div class="bubble user">Mình học khá Toán, thích công nghệ nhưng cũng muốn môi trường năng động. Nên chọn ngành gì?</div>
+              <div class="bubble ai">Mình đang gợi ý 3 nhóm phù hợp: Khoa học dữ liệu, Hệ thống thông tin và Digital Business. Bạn muốn ưu tiên mức học phí, cơ hội việc làm hay môi trường học tập trước?</div>
+              <div class="prompt-box">
+                <strong style="font-size:15px; color:var(--navy)">Thử chat với AI ngay →</strong>
+                <div class="prompt-row">
+                  <a href="#chat-section" class="btn btn-primary" style="padding:10px 18px;font-size:14px;">Mở khung chat đầy đủ</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="container reveal">
+      <div class="cards-4">
+        <article class="card">
+          <div class="icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3L20 7V17L12 21L4 17V7L12 3Z" stroke="currentColor" stroke-width="1.8"/><path d="M12 8V16" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5L12 8L16 10.5" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <h3>Chọn ngành cá nhân hóa</h3>
+          <p>Hỏi nhanh về sở thích, năng lực, mục tiêu nghề nghiệp và style học tập để gợi ý nhóm ngành phù hợp thay vì trả lời chung chung.</p>
+        </article>
+        <article class="card">
+          <div class="icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M4 19H20" stroke="currentColor" stroke-width="1.8"/><path d="M7 19V9L12 5L17 9V19" stroke="currentColor" stroke-width="1.8"/><path d="M10 12H14" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <h3>So sánh trường rõ ràng</h3>
+          <p>Đặt cạnh nhau học phí, chất lượng đào tạo, đầu vào, vị trí, học bổng và cơ hội việc làm để quyết định nhanh hơn.</p>
+        </article>
+        <article class="card">
+          <div class="icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M7 3V6" stroke="currentColor" stroke-width="1.8"/><path d="M17 3V6" stroke="currentColor" stroke-width="1.8"/><rect x="4" y="5" width="16" height="15" rx="3" stroke="currentColor" stroke-width="1.8"/><path d="M4 10H20" stroke="currentColor" stroke-width="1.8"/><path d="M8 14H9" stroke="currentColor" stroke-width="1.8"/><path d="M12 14H13" stroke="currentColor" stroke-width="1.8"/><path d="M16 14H17" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <h3>Deadline & timeline</h3>
+          <p>Hiển thị mốc hồ sơ, lịch tuyển sinh và nhắc việc theo từng giai đoạn để hạn chế rủi ro trễ hạn.</p>
+        </article>
+        <article class="card">
+          <div class="icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3L14.8 8.7L21 9.6L16.5 14L17.6 20.1L12 17.2L6.4 20.1L7.5 14L3 9.6L9.2 8.7L12 3Z" stroke="currentColor" stroke-width="1.8"/></svg>
+          </div>
+          <h3>Học bổng & cơ hội nổi bật</h3>
+          <p>Tổng hợp các lựa chọn phù hợp với hồ sơ người học để tăng cảm giác "web có ích" ngay lần truy cập đầu.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ======================================
+         FULL AI CHAT SECTION
+    ======================================= -->
+    <section id="chat-section" class="container reveal">
+      <div class="section-head">
+        <div>
+          <h2>Trò chuyện với Magerok AI</h2>
+          <p>Đặt câu hỏi về ngành học, trường, học bổng hoặc upload hồ sơ/nguyện vọng để AI phân tích và tư vấn cá nhân hóa.</p>
+        </div>
+      </div>
+
+      <div class="chat-layout">
+        <!-- SIDEBAR -->
+        <div class="chat-sidebar">
+          <div class="sidebar-header">
+            <h3>Lịch sử trò chuyện</h3>
+            <button class="new-chat-btn" onclick="newChat()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+              Cuộc trò chuyện mới
+            </button>
+          </div>
+          <div class="sidebar-list" id="historyList">
+            <!-- history items injected here -->
+          </div>
+          <div class="sidebar-footer">
+            <div class="user-info">
+              <div class="user-avatar">HS</div>
+              <div>
+                <div style="color:white;font-weight:600;">Học sinh</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.5);">Phiên làm việc hiện tại</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAIN CHAT -->
+        <div class="chat-main">
+          <!-- Top bar -->
+          <div class="chat-topbar">
+            <div class="chat-topbar-left">
+              <div class="ai-status-dot"></div>
+              <div>
+                <h4>Magerok AI</h4>
+                <small>Tư vấn tuyển sinh · sẵn sàng hỗ trợ</small>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-left:auto">
+              <span style="font-size:0.82rem;color:var(--muted)" id="user-display-name"></span>
+              <button onclick="window.location.href='/login'" title="Đăng xuất"
+                style="background:transparent;border:1.5px solid var(--line);border-radius:8px;
+                       padding:6px 12px;font-size:0.8rem;color:var(--muted);cursor:pointer;
+                       font-family:inherit;transition:all 0.2s"
+                onmouseover="this.style.borderColor='var(--teal)';this.style.color='var(--teal-dark)'"
+                onmouseout="this.style.borderColor='var(--line)';this.style.color='var(--muted)'">
+                Đăng xuất
+              </button>
+            </div>
+            <div id="fileIndicator" style="display:none;" class="file-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+              <span id="fileIndicatorName"></span>
+              <button onclick="removeFile()" title="Xóa file">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Messages -->
+          <div class="chat-messages" id="chatMessages">
+            <div class="chat-empty" id="emptyState">
+              <div class="empty-icon">
+                <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="#1F3A5F" stroke-width="3.2" opacity="0.92"/>
+                  <path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="#1F3A5F" stroke-width="2.4"/>
+                </svg>
+              </div>
+              <h4>Xin chào! Mình là Magerok AI 👋</h4>
+              <p>Hỏi mình về ngành học, trường đại học, học bổng hoặc upload hồ sơ để được tư vấn cá nhân hóa.</p>
+              <div class="suggestion-chips">
+                <button class="suggestion-chip" onclick="sendSuggestion('Mình học giỏi Toán, thích lĩnh vực công nghệ. Gợi ý ngành phù hợp?')">🎓 Gợi ý ngành theo sở thích</button>
+                <button class="suggestion-chip" onclick="sendSuggestion('So sánh ĐH Bách Khoa và ĐH FPT cho ngành CNTT?')">🏫 So sánh trường đại học</button>
+                <button class="suggestion-chip" onclick="sendSuggestion('Học bổng nào phù hợp với học sinh lớp 12 GPA 8.5?')">🌟 Tìm học bổng phù hợp</button>
+                <button class="suggestion-chip" onclick="sendSuggestion('Lập timeline nộp hồ sơ đại học trong 3 tháng tới?')">📅 Lộ trình nộp hồ sơ</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input area -->
+          <div class="chat-input-area">
+            <div class="chat-input-wrapper">
+              <div class="chat-input-row">
+                <textarea
+                  id="chat-textarea"
+                  placeholder="Hỏi về ngành học, trường, học bổng…"
+                  rows="1"
+                  onkeydown="handleKey(event)"
+                  oninput="autoResize(this)"
+                ></textarea>
+                <button class="chat-action-btn upload-btn" onclick="document.getElementById('file-upload-input').click()" title="Upload hồ sơ / file PDF">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </button>
+                <button class="chat-action-btn send-btn" id="sendBtn" onclick="sendMessage()" title="Gửi (Enter)">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+              <div class="chat-input-meta">
+                <div class="input-hint">
+                  <span><kbd class="kbd">Enter</kbd> gửi</span>
+                  <span><kbd class="kbd">Shift+Enter</kbd> xuống dòng</span>
+                  <span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                    Hỗ trợ PDF & ảnh
+                  </span>
+                </div>
+                <span id="charCount" style="color:rgba(95,108,123,0.45)"></span>
+              </div>
+            </div>
+          </div>
+
+          <input type="file" id="file-upload-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" onchange="handleFileUpload(event)" />
+        </div>
+      </div>
+    </section>
+
+    <section class="container reveal">
+      <div class="two-col">
+        <div class="mini-card">
+              <h4>Điểm chạm tích hợp AI</h4>
+              <p>1. Khung chat đầy đủ giữa trang<br/>2. Chip gợi ý nhanh ở hero<br/>3. Lịch sử trò chuyện bên trái<br/>4. Upload hồ sơ để phân tích</p>
+            </div>
+            <div class="mini-card">
+              <h4>Lead form mini</h4>
+              <p>Họ tên · Lớp · Khu vực quan tâm · Mức ngân sách · Mục tiêu tuyển sinh</p>
+            </div>
+            <div class="mini-card">
+              <h4>Output của AI</h4>
+              <p>Markdown đầy đủ: bullet, bảng, tiêu đề, in đậm. Streaming từng chữ, tự nhiên như chat thật.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section class="container reveal">
       <div class="section-head">
@@ -1433,15 +1651,15 @@
 
     // Kiểm tra auth khi load trang
     async function initAuth() {
-      // Demo mode
+      // Demo mode — không cần đăng nhập
+      setTimeout(() => {
+        const n = document.getElementById('user-display-name');
+        const a = document.getElementById('user-avatar');
+        if (n) n.textContent = 'Khách';
+        if (a) { a.textContent = 'K'; a.style.background='linear-gradient(135deg,#2EC4B6,#1CA79A)'; }
+      }, 100);
     }
     initAuth();
-    document.addEventListener('DOMContentLoaded', () => {
-      const nameEl = document.getElementById('user-display-name');
-      const avatarEl = document.getElementById('user-avatar');
-      if (nameEl) nameEl.textContent = 'Khách';
-      if (avatarEl) { avatarEl.textContent = 'K'; avatarEl.style.background = 'linear-gradient(135deg,#2EC4B6,#1CA79A)'; }
-    });
 
     /* =========================================
        CHAT STATE
