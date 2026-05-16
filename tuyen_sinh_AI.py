@@ -60,7 +60,7 @@ log = logging.getLogger(__name__)
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
 LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
-EMBEDDING_MODEL = "intfloat/multilingual-e5-large"  # Groq Embeddings API — không cần load model local
+# EMBEDDING_MODEL không dùng — embedding chạy local qua ChromaDB DefaultEmbeddingFunction (ONNX)
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
 # Đường dẫn tính từ vị trí file .py, không phụ thuộc thư mục đang chạy lệnh
@@ -435,6 +435,8 @@ def build_aggregator_prompt(cau_hoi_goc: str, cac_ket_qua: dict) -> str:
         "nganh":        "Chuyên gia ngành học",
         "to_hop":       "Chuyên gia tổ hợp môn",
         "huong_nghiep": "Chuyên gia hướng nghiệp",
+        "hoc_tap":      "Chuyên gia lộ trình học tập",
+        "kien_thuc":    "Chuyên gia kiến thức",
     }
     ket_qua_text = ""
     for agent, ket_qua in cac_ket_qua.items():
@@ -722,8 +724,12 @@ class TuVanTuyenSinh:
 
     def __init__(self):
         log.info("Đang khoi dong he thong tu van...")
+        from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
         chroma_client = chromadb.PersistentClient(path=CHROMA_DB_PATH)
-        self.collection = chroma_client.get_or_create_collection(COLLECTION_NAME)
+        self.collection = chroma_client.get_or_create_collection(
+            COLLECTION_NAME,
+            embedding_function=DefaultEmbeddingFunction(),
+        )
         key = os.getenv("GROQ_API_KEY", GROQ_API_KEY)
         self.groq = Groq(api_key=key)  # dùng cho cả LLM lẫn Embeddings
         self.lich_su = []
@@ -738,11 +744,11 @@ class TuVanTuyenSinh:
         - Câu trả lời thật sự
         - Câu hỏi ngược lại để làm rõ thêm (nếu thông tin chưa đủ)
         """
-        print(f"\n[Câu hỏi] {cau_hoi}")
+        log.info(f"[Câu hỏi] {cau_hoi}")
 
         # Bước 1: Orchestrator xác định agent và có cần hỏi thêm không
         agents, can_hoi_them = self._phan_loai(cau_hoi)
-        print(f"[Agents] Sẽ gọi: {agents}")
+        log.info(f"[Agents] Sẽ gọi: {agents}")
 
         # Nếu Orchestrator thấy cần hỏi thêm VÀ chưa có lịch sử đủ để trả lời
         # → trả về câu hỏi thêm, nhưng vẫn lưu câu hỏi gốc vào lịch sử
@@ -750,7 +756,7 @@ class TuVanTuyenSinh:
             # Kiểm tra lịch sử — nếu đã có info trong context thì bỏ qua, cứ trả lời
             lich_su_dai = len(self.lich_su) >= 4
             if not lich_su_dai:
-                print(f"[Hỏi thêm] {can_hoi_them}")
+                log.info(f"[Hỏi thêm] {can_hoi_them}")
                 # Lưu câu hỏi gốc vào lịch sử để lần sau dùng làm context
                 self.lich_su.append({"role": "user", "content": cau_hoi})
                 self.lich_su.append({"role": "assistant", "content": can_hoi_them})
@@ -1011,7 +1017,7 @@ Lần đầu dùng:
   1. pip install chromadb google-generativeai pandas pdfplumber
               requests beautifulsoup4 sentence-transformers
               tqdm python-dotenv openpyxl
-  2. Tạo file .env và thêm: GEMINI_API_KEY=AIza...
+  2. Tạo file .env và thêm: GROQ_API_KEY=gsk_...
   3. Để file dữ liệu vào data/excel/ hoặc data/pdf/
   4. python tuyen_sinh_AI.py ingest
   5. python tuyen_sinh_AI.py chat
