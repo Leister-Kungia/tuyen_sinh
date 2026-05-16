@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="utf-8"/>
+<meta charset="UTF-8"/>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='64' height='64' rx='14' fill='%231F3A5F'/%3E%3Cpath d='M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z' stroke='white' stroke-width='3.2' opacity='.92'/%3E%3Cpath d='M32 18L37.8 30L32 42L26.2 30L32 18Z' fill='%232EC4B6' stroke='white' stroke-width='2.4'/%3E%3Cpath d='M23 48L17 56L29 53.6L23 48Z' fill='white' opacity='.92'/%3E%3C/svg%3E">
-
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Magerok AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
@@ -513,6 +512,7 @@ let pendingFile  = null;   // { base64, type, name }
 let isBusy       = false;
 let conversations = [];    // [{ id, title, messages: [{role,content,imgDataUrl?}], ts }]
 let activeId      = null;
+let currentHistoryId = null;   // Supabase history UUID
 
 /* ── Auth ────────────────────────────────────────────────────────── */
 sb.auth.onAuthStateChange((_e, session) => {
@@ -535,7 +535,7 @@ sb.auth.onAuthStateChange((_e, session) => {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) { window.location.href = '/login'; return; }
   // session sẽ trigger onAuthStateChange → SIGNED_IN
-  loadConversations();
+  await loadConversations();
   renderEmpty();
 })();
 
@@ -544,20 +544,40 @@ async function logout() {
   window.location.href = '/login';
 }
 
-/* ── Conversations (localStorage) ───────────────────────────────── */
-function saveConversations() {
+/* ── Conversations (Supabase) ────────────────────────────────────── */
+async function loadConversations() {
+  if (!accessToken) return;
   try {
-    const key = 'magerok_convs_' + (currentUser?.id || 'anon');
-    localStorage.setItem(key, JSON.stringify(conversations.slice(0,40)));
-  } catch(_) {}
-}
-function loadConversations() {
-  try {
-    const key = 'magerok_convs_' + (currentUser?.id || 'anon');
-    const raw = localStorage.getItem(key);
-    if (raw) conversations = JSON.parse(raw);
+    const res = await fetch('/histories', {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    // Chuyển format Supabase → format local
+    conversations = data.map(h => ({
+      id:       h.id,
+      title:    h.title,
+      messages: [],          // load lazy khi click
+      ts:       new Date(h.updated_at).getTime(),
+      loaded:   false
+    }));
   } catch(_) { conversations = []; }
   renderSidebar();
+}
+
+async function saveNewHistory(title) {
+  // Tạo history mới trên Supabase, trả về history_id
+  return null; // history_id sẽ được trả về từ /hoi response
+}
+
+async function deleteHistoryRemote(id) {
+  if (!accessToken) return;
+  try {
+    await fetch(`/histories/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+  } catch(_) {}
 }
 
 function renderSidebar() {
@@ -581,29 +601,53 @@ function renderSidebar() {
 
 function newChat() {
   activeId = null;
+  currentHistoryId = null;   // reset để tạo history mới
   renderSidebar();
   renderEmpty();
   closeSidebar();
 }
 
-function loadConv(id) {
+async function loadConv(id) {
   const conv = conversations.find(c=>c.id===id);
   if (!conv) return;
   activeId = id;
+  currentHistoryId = id;   // set history_id khi load cuộc trò chuyện cũ
   renderSidebar();
   const box = document.getElementById('messages');
+  box.innerHTML = '<div style="text-align:center;padding:40px;color:#999;font-size:13px">Đang tải...</div>';
+
+  // Load messages từ Supabase nếu chưa load
+  if (!conv.loaded && accessToken) {
+    try {
+      const res = await fetch(`/histories/${id}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+      if (res.ok) {
+        const msgs = await res.json();
+        conv.messages = msgs.map(m => ({
+          role: m.role === 'assistant' ? 'ai' : m.role,
+          content: m.content,
+          imgDataUrl: null
+        }));
+        conv.loaded = true;
+      }
+    } catch(_) {}
+  }
+
   box.innerHTML = '';
-  conv.messages.forEach(m => {
-    appendDOM(m.role, m.content, m.imgDataUrl, false);
-  });
-  box.scrollTop = box.scrollHeight;
+  if (!conv.messages.length) {
+    renderEmpty();
+  } else {
+    conv.messages.forEach(m => appendDOM(m.role, m.content, m.imgDataUrl, false));
+    box.scrollTop = box.scrollHeight;
+  }
   closeSidebar();
 }
 
 function deleteConv(e, id) {
   e.stopPropagation();
   conversations = conversations.filter(c=>c.id!==id);
-  saveConversations();
+  deleteHistoryRemote(id);   // xóa trên Supabase
   if (activeId === id) newChat();
   else renderSidebar();
 }
@@ -673,7 +717,6 @@ async function sendMessage() {
   // Store & render user message
   conv.messages.push({ role:'user', content:msgText, imgDataUrl });
   appendDOM('user', msgText, imgDataUrl, true);
-  saveConversations();
 
   // Typing
   const typId = 'typ_'+Date.now();
@@ -693,6 +736,7 @@ async function sendMessage() {
         cau_hoi: msgText,
         image_base64: fileSnap?.base64 || null,
         image_type:   fileSnap?.type   || null,
+        history_id:   currentHistoryId || null,
       })
     });
 
@@ -705,6 +749,15 @@ async function sendMessage() {
 
     const data = await res.json();
     const answer = data.tra_loi || '(Không có phản hồi)';
+
+    // Lưu history_id từ server để dùng cho tin nhắn tiếp theo
+    if (data.history_id && !currentHistoryId) {
+      currentHistoryId = data.history_id;
+      // Cập nhật id của conv local để khớp với Supabase
+      if (conv) conv.id = data.history_id;
+      activeId = data.history_id;
+      renderSidebar();
+    }
 
     // Simulate streaming word by word
     const el = appendDOM('ai','',null,true);
@@ -729,7 +782,6 @@ async function sendMessage() {
     el.querySelector('.msg-bubble').appendChild(t);
 
     conv.messages.push({ role:'ai', content:answer });
-    saveConversations();
 
   } catch(err) {
     removeTyping(typId);
@@ -807,8 +859,10 @@ function appendTyping(id) {
   row.id = id; row.className='msg-row';
   row.innerHTML = `
     <div class="msg-avatar ai">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round">
-        <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+      <svg width="16" height="16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="white" stroke-width="3.2" opacity="0.92"/>
+        <path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="white" stroke-width="2.4"/>
+        <path d="M23 48L17 56L29 53.6L23 48Z" fill="white" opacity="0.92"/>
       </svg>
     </div>
     <div class="msg-bubble ai"><div class="typing-dots"><span></span><span></span><span></span></div></div>`;
