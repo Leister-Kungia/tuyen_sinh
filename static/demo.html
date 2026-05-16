@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Magerok — AI tư vấn tuyển sinh cá nhân hóa</title>
+  <title>Demo · Magerok — AI tư vấn tuyển sinh cá nhân hóa</title>
   <meta name="description" content="Magerok là website AI tư vấn tuyển sinh giúp học sinh và phụ huynh chọn ngành, chọn trường, theo dõi deadline, tìm học bổng và xây lộ trình hồ sơ." />
   <!-- marked.js for markdown rendering -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
@@ -1228,6 +1228,14 @@
   </style>
 </head>
 <body>
+<div id="demo-banner" style="background:linear-gradient(135deg,#1F3A5F,#4E7FB6);color:#fff;
+  text-align:center;padding:10px 20px;font-size:13px;display:flex;
+  align-items:center;justify-content:center;gap:12px;flex-wrap:wrap">
+  <span>💡 Bạn đang dùng thử — lịch sử chat sẽ không được lưu</span>
+  <a href="/login" style="background:#2EC4B6;color:#fff;padding:5px 14px;
+    border-radius:100px;font-weight:600;font-size:12px;text-decoration:none;
+    white-space:nowrap">Đăng nhập để lưu lịch sử →</a>
+</div>
   <header>
     <div class="container nav">
       <a href="#top" class="brand" aria-label="Magerok home">
@@ -1730,48 +1738,11 @@
 
     let currentUser = null;
     let accessToken = null;
-    let currentHistoryId = null;  // UUID cuộc trò chuyện hiện tại
 
     // Kiểm tra auth khi load trang
     async function initAuth() {
-      // Supabase v2 PKCE: dùng onAuthStateChange làm nguồn duy nhất
-      // Nó tự xử lý code exchange từ URL, không cần parse thủ công
-      sb.auth.onAuthStateChange((_event, session) => {
-        console.log('[Auth]', _event, session ? 'has session' : 'no session');
-
-        if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
-          currentUser = session.user;
-          accessToken = session.access_token;
-          // Xóa query params OAuth khỏi URL
-          if (window.location.search || window.location.hash) {
-            history.replaceState(null, '', window.location.pathname);
-          }
-          const nameEl = document.getElementById('user-display-name');
-          if (nameEl) nameEl.textContent = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Bạn';
-        }
-
-        if (_event === 'SIGNED_OUT') {
-          window.location.href = '/login';
-        }
-      });
-
-      // Kiểm tra session có sẵn trong localStorage
-      const { data: { session } } = await sb.auth.getSession();
-      if (session) {
-        currentUser = session.user;
-        accessToken = session.access_token;
-        const nameEl = document.getElementById('user-display-name');
-        if (nameEl) nameEl.textContent = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'Bạn';
-      } else {
-        // Không có session và không có code trong URL → về login
-        const params = new URLSearchParams(window.location.search);
-        if (!params.get('code')) {
-          window.location.href = '/login';
-        }
-        // Nếu có code → đợi onAuthStateChange xử lý PKCE exchange
-      }
-    }
-    initAuth();
+      // Demo mode — không cần auth
+    };
 
     /* =========================================
        CHAT STATE
@@ -2003,7 +1974,7 @@ Phong cách trả lời:
       const image_type = lastUser?.fileInfo?.mediaType || 'image/jpeg';
 
       const headers = { 'Content-Type': 'application/json' };
-      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+      // demo: không cần auth header
 
       const response = await fetch('/hoi', {
         method: 'POST',
