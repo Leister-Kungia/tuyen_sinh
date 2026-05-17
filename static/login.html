@@ -389,11 +389,18 @@
         if (error) throw error;
         window.location.href = '/chat';
       } else {
-        const { error } = await sb.auth.signUp({
+        const { data, error } = await sb.auth.signUp({
           email, password,
           options: { data: { full_name: name } }
         });
         if (error) throw error;
+
+        // Supabase trả về identities=[] nếu email đã tồn tại
+        if (data?.user?.identities?.length === 0) {
+          showAlert('Email này đã được đăng ký. Vui lòng đăng nhập.');
+          return;
+        }
+
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('success-screen').style.display = 'block';
       }
@@ -423,7 +430,8 @@
       redirectTo: window.location.origin + '/reset-password'
     });
     if (error) showAlert(error.message);
-    else showAlert('Đã gửi link đặt lại mật khẩu. Kiểm tra email nhé!', 'success');
+    // Luôn hiện thông báo trung lập — không tiết lộ email có tồn tại hay không
+    else showAlert('Nếu email này đã đăng ký, bạn sẽ nhận được link đặt lại mật khẩu.', 'success');
   }
 
   // Enter to submit
