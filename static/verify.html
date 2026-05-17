@@ -142,23 +142,27 @@
     );
   }
 
-  // Supabase gửi link dạng: /verify?token=xxx&type=signup
-  // hoặc dạng hash: /#access_token=xxx&type=signup
-  // onAuthStateChange tự xử lý cả 2 dạng
+  // URL dạng: /verify?token_hash=xxx&type=signup
+  async function init() {
+    const params    = new URLSearchParams(window.location.search);
+    const tokenHash = params.get('token_hash');
+    const type      = params.get('type');
 
-  sb.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      // Xác nhận thành công → đăng xuất ngay (user sẽ login lại chủ động)
-      show('success');
-      sb.auth.signOut();
+    if (!tokenHash || type !== 'signup') {
+      show('error');
+      return;
     }
-  });
 
-  // Fallback: nếu sau 5s không có event → link lỗi
-  setTimeout(() => {
-    const cur = document.getElementById('loading').style.display;
-    if (cur !== 'none') show('error');
-  }, 5000);
+    const { error } = await sb.auth.verifyOtp({ token_hash: tokenHash, type: 'signup' });
+    if (error) {
+      show('error');
+    } else {
+      show('success');
+      await sb.auth.signOut(); // đăng xuất, user login lại chủ động
+    }
+  }
+
+  init();
 </script>
 </body>
 </html>
