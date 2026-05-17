@@ -39,6 +39,8 @@ import sys
 import uuid
 import json
 import time
+import base64
+import io
 import logging
 from datetime import datetime
 
@@ -63,12 +65,15 @@ try:
     _CAN_DRAW = True
 except ImportError:
     _CAN_DRAW = False
-    log_msg = "matplotlib/networkx chưa cài — tính năng vẽ hình bị tắt. Chạy: pip install matplotlib networkx numpy"
+    _DRAW_WARN = "matplotlib/networkx chưa cài — tính năng vẽ hình bị tắt."
 
 load_dotenv()  # Đọc API key từ file .env nếu có
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
+
+if not _CAN_DRAW:
+    log.warning("matplotlib/networkx chưa cài — tính năng vẽ hình bị tắt. Chạy: pip install matplotlib networkx numpy")
 
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
@@ -312,15 +317,11 @@ def tim_kiem_web(query: str, n_trang: int = 3) -> str:
 # AI trả về tag [GENERATE_IMAGE: <mô tả>] → hàm ve_hinh() xử lý → base64 PNG
 # ══════════════════════════════════════════════════════════════════════════════
 
-import base64
-import io
-import re as _re
-
 # Thư mục lưu ảnh sinh ra (dùng cho API trả file)
 _IMG_DIR = os.path.join(_BASE_DIR, "static", "generated")
 os.makedirs(_IMG_DIR, exist_ok=True)
 
-_IMAGE_TAG_RE = _re.compile(r'\[GENERATE_IMAGE:\s*(.+?)\]', _re.IGNORECASE | _re.DOTALL)
+_IMAGE_TAG_RE = re.compile(r'\[GENERATE_IMAGE:\s*(.+?)\]', re.IGNORECASE | re.DOTALL)
 
 
 def _fig_to_base64(fig) -> str:
@@ -363,9 +364,9 @@ def _ve_plot(desc: str):
     plotted = 0
 
     # Trích hàm số từ mô tả (dạng y=..., f(x)=...)
-    funcs = _re.findall(r'y\s*=\s*([^,\[\]]+?)(?:,|\band\b|$)', desc, _re.IGNORECASE)
+    funcs = re.findall(r'y\s*=\s*([^,\[\]]+?)(?:,|\band\b|$)', desc, re.IGNORECASE)
     if not funcs:
-        funcs = _re.findall(r'f\(x\)\s*=\s*([^,\[\]]+?)(?:,|\band\b|$)', desc, _re.IGNORECASE)
+        funcs = re.findall(r'f\(x\)\s*=\s*([^,\[\]]+?)(?:,|\band\b|$)', desc, re.IGNORECASE)
     if not funcs:
         # Fallback: vẽ y=x^2 nếu không parse được
         funcs = ["x**2"]
@@ -427,7 +428,7 @@ def _ve_hinh_hoc(desc: str):
     d = desc.lower()
 
     # Tam giác vuông với cạnh a, b, c
-    m_tri = _re.search(r'(?:sides?|cạnh)[^\d]*(\d+)[^\d]+(\d+)[^\d]+(\d+)', desc, _re.IGNORECASE)
+    m_tri = re.search(r'(?:sides?|cạnh)[^\d]*(\d+)[^\d]+(\d+)[^\d]+(\d+)', desc, re.IGNORECASE)
     if "triangle" in d or "tam giác" in d:
         if m_tri:
             a, b, c = int(m_tri.group(1)), int(m_tri.group(2)), int(m_tri.group(3))
@@ -452,7 +453,7 @@ def _ve_hinh_hoc(desc: str):
 
     elif "inclined plane" in d or "mặt phẳng nghiêng" in d:
         angle = 30
-        m_ang = _re.search(r'(\d+)\s*degree', desc, _re.IGNORECASE)
+        m_ang = re.search(r'(\d+)\s*degree', desc, re.IGNORECASE)
         if m_ang: angle = int(m_ang.group(1))
         ang_r = np.radians(angle)
         L = 5
@@ -536,8 +537,8 @@ def _ve_concept_map(desc: str):
     edges = []
 
     # Parse cặp A -> B từ mô tả
-    arrows = _re.findall(r'([A-Za-zÀ-ỹ ]+?)\s*[-=>]+\s*([A-Za-zÀ-ỹ ]+?)(?:,|;|$)',
-                         desc, _re.IGNORECASE)
+    arrows = re.findall(r'([A-Za-zÀ-ỹ ]+?)\s*[-=>]+\s*([A-Za-zÀ-ỹ ]+?)(?:,|;|$)',
+                         desc, re.IGNORECASE)
     for src, dst in arrows:
         src, dst = src.strip(), dst.strip()
         if src and dst and len(src) < 40 and len(dst) < 40:
