@@ -52,6 +52,19 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 from dotenv import load_dotenv
 
+# Thư viện vẽ hình — cài thêm: pip install matplotlib networkx
+try:
+    import matplotlib
+    matplotlib.use("Agg")  # không cần GUI, render sang file
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    import numpy as np
+    import networkx as nx
+    _CAN_DRAW = True
+except ImportError:
+    _CAN_DRAW = False
+    log_msg = "matplotlib/networkx chưa cài — tính năng vẽ hình bị tắt. Chạy: pip install matplotlib networkx numpy"
+
 load_dotenv()  # Đọc API key từ file .env nếu có
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -294,7 +307,307 @@ def tim_kiem_web(query: str, n_trang: int = 3) -> str:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PHẦN 2 — PROMPTS (kịch bản cho từng AI agent)
+# PHẦN 1D — ENGINE VẼ HÌNH (Matplotlib / NetworkX)
+#
+# AI trả về tag [GENERATE_IMAGE: <mô tả>] → hàm ve_hinh() xử lý → base64 PNG
+# ══════════════════════════════════════════════════════════════════════════════
+
+import base64
+import io
+import re as _re
+
+# Thư mục lưu ảnh sinh ra (dùng cho API trả file)
+_IMG_DIR = os.path.join(_BASE_DIR, "static", "generated")
+os.makedirs(_IMG_DIR, exist_ok=True)
+
+_IMAGE_TAG_RE = _re.compile(r'\[GENERATE_IMAGE:\s*(.+?)\]', _re.IGNORECASE | _re.DOTALL)
+
+
+def _fig_to_base64(fig) -> str:
+    """Chuyển matplotlib Figure → base64 PNG string."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    buf.seek(0)
+    plt.close(fig)
+    return base64.b64encode(buf.read()).decode("utf-8")
+
+
+def _parse_image_desc(desc: str) -> dict:
+    """
+    Phân tích mô tả tự nhiên → dict cấu hình:
+    loai: 'plot' | 'geometry' | 'concept_map' | 'vector' | 'unit_circle'
+    """
+    d = desc.lower()
+    if any(k in d for k in ["concept map", "concept_map", "mind map", "sơ đồ", "diagram"]):
+        return {"loai": "concept_map"}
+    if any(k in d for k in ["unit circle", "vòng tròn đơn vị", "circle sin cos"]):
+        return {"loai": "unit_circle"}
+    if any(k in d for k in ["triangle", "tam giác", "rectangle", "hình chữ nhật",
+                             "polygon", "geometry", "hình học", "inclined plane"]):
+        return {"loai": "geometry"}
+    if any(k in d for k in ["vector", "force", "lực", "arrow"]):
+        return {"loai": "vector"}
+    # Mặc định: vẽ đồ thị hàm số
+    return {"loai": "plot"}
+
+
+def _ve_plot(desc: str):
+    """Vẽ đồ thị hàm số từ mô tả tự nhiên."""
+    fig, ax = plt.subplots(figsize=(7, 5), facecolor="#f8fbff")
+    ax.set_facecolor("#ffffff")
+    ax.grid(True, linestyle="--", alpha=0.5, color="#ccddee")
+
+    x = np.linspace(-10, 10, 800)
+    colors = ["#1F3A5F", "#2EC4B6", "#E05A2B", "#8B5CF6", "#059669"]
+    plotted = 0
+
+    # Trích hàm số từ mô tả (dạng y=..., f(x)=...)
+    funcs = _re.findall(r'y\s*=\s*([^,\[\]]+?)(?:,|\band\b|$)', desc, _re.IGNORECASE)
+    if not funcs:
+        funcs = _re.findall(r'f\(x\)\s*=\s*([^,\[\]]+?)(?:,|\band\b|$)', desc, _re.IGNORECASE)
+    if not funcs:
+        # Fallback: vẽ y=x^2 nếu không parse được
+        funcs = ["x**2"]
+
+    for i, expr in enumerate(funcs[:5]):
+        expr_py = (expr.strip()
+                   .replace("^", "**")
+                   .replace("sqrt", "np.sqrt")
+                   .replace("sin", "np.sin")
+                   .replace("cos", "np.cos")
+                   .replace("tan", "np.tan")
+                   .replace("log", "np.log")
+                   .replace("abs", "np.abs")
+                   .replace("pi", "np.pi")
+                   .replace("exp", "np.exp"))
+        try:
+            y = eval(expr_py, {"x": x, "np": np, "__builtins__": {}})
+            label = f"y = {expr.strip()}"
+            ax.plot(x, y, color=colors[i % len(colors)], linewidth=2.2, label=label)
+            plotted += 1
+        except Exception:
+            continue
+
+    # Đánh dấu giao điểm nếu có 2 hàm
+    if plotted == 2:
+        try:
+            f1 = eval(funcs[0].strip().replace("^", "**").replace("sqrt","np.sqrt")
+                      .replace("sin","np.sin").replace("cos","np.cos")
+                      .replace("pi","np.pi"), {"x": x, "np": np, "__builtins__": {}})
+            f2 = eval(funcs[1].strip().replace("^", "**").replace("sqrt","np.sqrt")
+                      .replace("sin","np.sin").replace("cos","np.cos")
+                      .replace("pi","np.pi"), {"x": x, "np": np, "__builtins__": {}})
+            diff = f1 - f2
+            sign_change = np.where(np.diff(np.sign(diff)))[0]
+            for idx in sign_change[:6]:
+                ax.plot(x[idx], f1[idx], "o", color="#E05A2B", markersize=7, zorder=5)
+        except Exception:
+            pass
+
+    ax.axhline(0, color="#333", linewidth=0.8)
+    ax.axvline(0, color="#333", linewidth=0.8)
+    ax.set_xlabel("x", fontsize=12)
+    ax.set_ylabel("y", fontsize=12)
+    ax.set_title(desc[:80], fontsize=11, color="#1F3A5F", pad=10)
+    if plotted > 0:
+        ax.legend(fontsize=10)
+    ax.set_ylim(-20, 20)
+    return fig
+
+
+def _ve_hinh_hoc(desc: str):
+    """Vẽ hình học cơ bản từ mô tả."""
+    fig, ax = plt.subplots(figsize=(6, 6), facecolor="#f8fbff")
+    ax.set_facecolor("#ffffff")
+    ax.set_aspect("equal")
+    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.set_title(desc[:80], fontsize=11, color="#1F3A5F", pad=10)
+
+    d = desc.lower()
+
+    # Tam giác vuông với cạnh a, b, c
+    m_tri = _re.search(r'(?:sides?|cạnh)[^\d]*(\d+)[^\d]+(\d+)[^\d]+(\d+)', desc, _re.IGNORECASE)
+    if "triangle" in d or "tam giác" in d:
+        if m_tri:
+            a, b, c = int(m_tri.group(1)), int(m_tri.group(2)), int(m_tri.group(3))
+        else:
+            a, b, c = 3, 4, 5
+        pts = np.array([[0,0],[a,0],[0,b]])
+        tri = plt.Polygon(pts, fill=True, facecolor="#EEF4FB", edgecolor="#1F3A5F", linewidth=2)
+        ax.add_patch(tri)
+        # Nhãn cạnh
+        ax.text(a/2, -0.3, f"a={a}", ha="center", fontsize=11, color="#E05A2B", fontweight="bold")
+        ax.text(-0.4, b/2, f"b={b}", ha="center", fontsize=11, color="#E05A2B", fontweight="bold")
+        ax.text(a/2+0.2, b/2+0.2, f"c={c}", ha="center", fontsize=11, color="#2EC4B6", fontweight="bold")
+        # Góc vuông
+        sq = plt.Polygon([[0,0],[0.3,0],[0.3,0.3],[0,0.3]], fill=False,
+                          edgecolor="#1F3A5F", linewidth=1.2)
+        ax.add_patch(sq)
+        # Nhãn góc
+        ax.text(0.1, b+0.15, "A", fontsize=12, color="#1F3A5F", fontweight="bold")
+        ax.text(a+0.1, 0, "B", fontsize=12, color="#1F3A5F", fontweight="bold")
+        ax.text(-0.35, -0.35, "C", fontsize=12, color="#1F3A5F", fontweight="bold")
+        ax.set_xlim(-1, a+1); ax.set_ylim(-1, b+1)
+
+    elif "inclined plane" in d or "mặt phẳng nghiêng" in d:
+        angle = 30
+        m_ang = _re.search(r'(\d+)\s*degree', desc, _re.IGNORECASE)
+        if m_ang: angle = int(m_ang.group(1))
+        ang_r = np.radians(angle)
+        L = 5
+        # Mặt phẳng nghiêng
+        pts = np.array([[0,0],[L*np.cos(ang_r), L*np.sin(ang_r)],[L*np.cos(ang_r),0]])
+        tri = plt.Polygon(pts, fill=True, facecolor="#F3EBDD", edgecolor="#1F3A5F", linewidth=2)
+        ax.add_patch(tri)
+        # Khối
+        bx, by = L*np.cos(ang_r)*0.5, L*np.sin(ang_r)*0.5
+        block = plt.Rectangle((bx-0.3, by), 0.6, 0.5, angle=np.degrees(ang_r),
+                                facecolor="#4E7FB6", edgecolor="#1F3A5F", linewidth=1.5)
+        ax.add_patch(block)
+        # Vectors lực
+        ax.annotate("", xy=(bx, by-1.2), xytext=(bx, by),
+                    arrowprops=dict(arrowstyle="->", color="#E05A2B", lw=2))
+        ax.text(bx+0.1, by-0.7, "P (trọng lực)", fontsize=9, color="#E05A2B")
+        ax.annotate("", xy=(bx-np.sin(ang_r)*1.2, by+np.cos(ang_r)*1.2), xytext=(bx, by),
+                    arrowprops=dict(arrowstyle="->", color="#2EC4B6", lw=2))
+        ax.text(bx-np.sin(ang_r)*1.3-0.5, by+np.cos(ang_r)*1.3, "N (pháp tuyến)",
+                fontsize=9, color="#2EC4B6")
+        ax.text(0.5, -0.3, f"{angle}°", fontsize=11, color="#1F3A5F", fontweight="bold")
+        ax.set_xlim(-0.5, L+0.5); ax.set_ylim(-1.5, L*np.sin(ang_r)+1)
+    else:
+        # Hình chữ nhật mặc định
+        rect = plt.Rectangle((0.5, 0.5), 4, 2.5, fill=True,
+                               facecolor="#EEF4FB", edgecolor="#1F3A5F", linewidth=2)
+        ax.add_patch(rect)
+        ax.text(2.5, -0.1, "a", ha="center", fontsize=12, color="#E05A2B", fontweight="bold")
+        ax.text(0.1, 1.75, "b", ha="center", fontsize=12, color="#E05A2B", fontweight="bold")
+        ax.set_xlim(0, 5.5); ax.set_ylim(-0.5, 3.5)
+    return fig
+
+
+def _ve_vong_tron_don_vi():
+    """Vẽ vòng tròn đơn vị với các góc đặc biệt."""
+    fig, ax = plt.subplots(figsize=(7, 7), facecolor="#f8fbff")
+    ax.set_facecolor("#ffffff")
+    ax.set_aspect("equal")
+    ax.grid(True, linestyle="--", alpha=0.3)
+
+    theta = np.linspace(0, 2*np.pi, 400)
+    ax.plot(np.cos(theta), np.sin(theta), color="#1F3A5F", linewidth=2)
+    ax.axhline(0, color="#555", linewidth=0.8)
+    ax.axvline(0, color="#555", linewidth=0.8)
+
+    gocs = [(0,"0°","1","0"), (30,"30°","√3/2","1/2"), (45,"45°","√2/2","√2/2"),
+            (60,"60°","1/2","√3/2"), (90,"90°","0","1"), (120,"120°","-1/2","√3/2"),
+            (135,"135°","-√2/2","√2/2"), (150,"150°","-√3/2","1/2"),
+            (180,"180°","-1","0"), (210,"210°","-√3/2","-1/2"),
+            (240,"240°","-1/2","-√3/2"), (270,"270°","0","-1"),
+            (300,"300°","1/2","-√3/2"), (315,"315°","√2/2","-√2/2"),
+            (330,"330°","√3/2","-1/2")]
+
+    for deg, label, cos_v, sin_v in gocs:
+        rad = np.radians(deg)
+        x, y = np.cos(rad), np.sin(rad)
+        ax.plot(x, y, "o", color="#2EC4B6", markersize=6, zorder=5)
+        offset = 0.18
+        ax.text(x*(1+offset), y*(1+offset),
+                f"{label}\n({cos_v}, {sin_v})",
+                ha="center", va="center", fontsize=7.5,
+                color="#1F3A5F", fontweight="bold")
+        ax.plot([0, x], [0, y], color="#4E7FB6", linewidth=0.7, alpha=0.5)
+
+    ax.set_title("Vòng tròn đơn vị — Các góc đặc biệt", fontsize=13,
+                 color="#1F3A5F", fontweight="bold", pad=12)
+    ax.set_xlim(-1.7, 1.7); ax.set_ylim(-1.7, 1.7)
+    return fig
+
+
+def _ve_concept_map(desc: str):
+    """Vẽ sơ đồ khái niệm (concept map) bằng NetworkX."""
+    if not _CAN_DRAW:
+        return None
+
+    fig, ax = plt.subplots(figsize=(9, 6), facecolor="#f8fbff")
+    ax.set_facecolor("#ffffff")
+    ax.set_title(desc[:80], fontsize=11, color="#1F3A5F", pad=10)
+
+    G = nx.DiGraph()
+    edges = []
+
+    # Parse cặp A -> B từ mô tả
+    arrows = _re.findall(r'([A-Za-zÀ-ỹ ]+?)\s*[-=>]+\s*([A-Za-zÀ-ỹ ]+?)(?:,|;|$)',
+                         desc, _re.IGNORECASE)
+    for src, dst in arrows:
+        src, dst = src.strip(), dst.strip()
+        if src and dst and len(src) < 40 and len(dst) < 40:
+            G.add_edge(src, dst)
+            edges.append((src, dst))
+
+    if not G.nodes:
+        # Fallback: sơ đồ mẫu
+        G.add_edges_from([("Quang hợp","Phản ứng ánh sáng"),
+                          ("Quang hợp","Phản ứng tối (Calvin)"),
+                          ("Phản ứng ánh sáng","ATP + NADPH"),
+                          ("Phản ứng tối (Calvin)","Glucose")])
+
+    pos = nx.spring_layout(G, seed=42, k=2.5)
+    node_colors = ["#1F3A5F" if G.in_degree(n)==0 else "#2EC4B6" for n in G.nodes]
+    nx.draw_networkx_nodes(G, pos, ax=ax, node_color=node_colors,
+                           node_size=2200, alpha=0.92)
+    nx.draw_networkx_labels(G, pos, ax=ax, font_color="white",
+                             font_size=9, font_weight="bold")
+    nx.draw_networkx_edges(G, pos, ax=ax, edge_color="#4E7FB6",
+                            arrows=True, arrowsize=22,
+                            width=2, connectionstyle="arc3,rad=0.08")
+    ax.axis("off")
+    return fig
+
+
+def ve_hinh(mo_ta: str) -> str | None:
+    """
+    Nhận mô tả (tiếng Anh hoặc Việt) → vẽ hình → trả về base64 PNG.
+    Trả về None nếu không thể vẽ.
+    """
+    if not _CAN_DRAW:
+        return None
+    try:
+        cfg = _parse_image_desc(mo_ta)
+        loai = cfg["loai"]
+        if loai == "unit_circle":
+            fig = _ve_vong_tron_don_vi()
+        elif loai == "geometry":
+            fig = _ve_hinh_hoc(mo_ta)
+        elif loai == "concept_map":
+            fig = _ve_concept_map(mo_ta)
+        elif loai == "vector":
+            fig = _ve_hinh_hoc(mo_ta)  # dùng lại engine hình học
+        else:
+            fig = _ve_plot(mo_ta)
+        return _fig_to_base64(fig)
+    except Exception as e:
+        log.warning(f"[VẼ HÌNH] Lỗi: {e}")
+        return None
+
+
+def xu_ly_anh_trong_tra_loi(tra_loi: str) -> tuple[str, list[str]]:
+    """
+    Quét câu trả lời AI tìm tag [GENERATE_IMAGE: ...].
+    Trả về:
+      - tra_loi đã xóa tag
+      - list base64 PNG (có thể rỗng)
+    """
+    tags = _IMAGE_TAG_RE.findall(tra_loi)
+    tra_loi_sach = _IMAGE_TAG_RE.sub("", tra_loi).strip()
+    anh_b64_list = []
+    for mo_ta in tags:
+        b64 = ve_hinh(mo_ta.strip())
+        if b64:
+            anh_b64_list.append(b64)
+            log.info(f"[VẼ HÌNH] Đã vẽ: {mo_ta[:60]}")
+        else:
+            log.warning(f"[VẼ HÌNH] Bỏ qua (lỗi): {mo_ta[:60]}")
+    return tra_loi_sach, anh_b64_list
 #
 # Mỗi agent có:
 #   - [TÊN]_SYSTEM : mô tả vai trò, viết 1 lần và cố định
@@ -581,24 +894,53 @@ Xưng "mình", gọi người hỏi là "bạn". Kiên nhẫn, vui vẻ, không 
 
 Ngày hôm nay: {ngay_hom_nay}. Dùng thông tin này khi được hỏi về thời gian hiện tại hoặc năm hiện tại.
 
-Khi giải thích kiến thức:
+== QUY TẮC KÝ HIỆU TOÁN HỌC — BẮT BUỘC TUÂN THỦ ==
+Luôn dùng ký hiệu ASCII/text thuần, KHÔNG dùng Unicode toán học:
+  - Nhân        : dùng  *        (KHÔNG dùng ×, ·)
+  - Chia        : dùng  /        (KHÔNG dùng ÷)
+  - Mũ          : dùng  ^        (KHÔNG dùng ², ³, chữ số nhỏ trên)
+  - Căn bậc 2   : dùng  sqrt()   (KHÔNG dùng √)
+  - Căn bậc n   : dùng  nrt()    (KHÔNG dùng ∛, ∜)
+  - Phân số     : dùng  a/b      (KHÔNG dùng ½, ¾)
+  - Tổng sigma  : dùng  sum()    (KHÔNG dùng Σ)
+  - Tích phân   : dùng  int()    (KHÔNG dùng ∫)
+  - Vô cực      : dùng  inf      (KHÔNG dùng ∞)
+  - Góc         : dùng  goc()    hoặc angle() (KHÔNG dùng ∠)
+  - Pi          : dùng  pi       (KHÔNG dùng π)
+  - Delta       : dùng  delta    (KHÔNG dùng Δ, δ)
+  - Thuộc       : dùng  in       (KHÔNG dùng ∈)
+  - Suy ra      : dùng  =>       (KHÔNG dùng ⇒, →)
+  - Tương đương : dùng  <=>      (KHÔNG dùng ⟺)
 
+Ví dụ đúng : "3 * 2 = 6",  "x^2 + 2*x + 1 = 0",  "sqrt(16) = 4",  "S = pi * r^2"
+Ví dụ SAI  : "3 × 2 = 6",  "x² + 2x + 1 = 0",    "√16 = 4",       "S = πr²"
+
+== KHI NÀO TẠO HÌNH ẢNH ==
+Nếu câu hỏi liên quan đến: đồ thị hàm số, hình học phẳng/không gian, sơ đồ khái niệm,
+biểu đồ vật lý, chu kỳ tế bào, sơ đồ hóa học — hãy thêm dòng đặc biệt ở CUỐI câu trả lời:
+
+[GENERATE_IMAGE: <mô tả bằng tiếng Anh, ngắn gọn, đủ để vẽ bằng matplotlib/networkx>]
+
+Ví dụ:
+  [GENERATE_IMAGE: plot y=x^2 and y=2*x+1 on same axes, mark intersection points, label axes x and y]
+  [GENERATE_IMAGE: draw right triangle with sides a=3 b=4 c=5, label all sides and angles]
+  [GENERATE_IMAGE: draw unit circle with angle 30 45 60 90 degrees marked, show sin cos values]
+  [GENERATE_IMAGE: force diagram: block on inclined plane 30 degrees, show weight normal friction vectors]
+  [GENERATE_IMAGE: concept map: Photosynthesis -> Light reaction, Dark reaction; show inputs CO2 H2O light outputs glucose O2]
+
+Chỉ thêm [GENERATE_IMAGE] khi hình ảnh THỰC SỰ giúp hiểu bài — không spam.
+Không thêm [GENERATE_IMAGE] cho câu hỏi thuần lý thuyết/định nghĩa.
+
+== CÁCH GIẢI THÍCH ==
 1. BẮT ĐẦU ĐƠN GIẢN: dùng ví dụ thực tế, so sánh với thứ quen thuộc
-   Ví dụ: "Con trỏ trong C++ giống như địa chỉ nhà — nó không phải là căn nhà, mà là địa chỉ để tìm đến căn nhà đó."
-
-2. TĂNG DẦN ĐỘ SÂU: từ khái niệm cơ bản → cách dùng → ví dụ code/bài tập → lỗi thường gặp
-
-3. CODE MẪU (nếu liên quan lập trình): viết code ngắn, có comment giải thích từng dòng
-
-4. KIỂM TRA HIỂU BÀI: cuối phần giải thích, hỏi "Bạn thử đoán xem nếu mình làm X thì kết quả sẽ ra sao?" 
-   hoặc đưa ra 1 câu hỏi nhỏ để bạn tự suy nghĩ
-
-5. GỢI Ý HỌC TIẾP: sau khi hiểu khái niệm này, nên học gì tiếp theo
+2. TĂNG DẦN ĐỘ SÂU: khái niệm → cách dùng → ví dụ/bài tập → lỗi thường gặp
+3. CODE MẪU (lập trình): ngắn, có comment từng dòng
+4. KIỂM TRA HIỂU BÀI: hỏi 1 câu nhỏ cuối bài để bạn tự suy nghĩ
+5. GỢI Ý HỌC TIẾP: sau khái niệm này nên học gì
 
 Nguyên tắc:
-- Không bao giờ nói "câu hỏi này quá cơ bản" — mọi câu hỏi đều có giá trị
-- Nếu câu hỏi chưa rõ, hỏi thêm để giải thích đúng trọng tâm
-- Dùng emoji ✅ ❌ 💡 để làm nổi bật điểm quan trọng
+- Không bao giờ nói "câu hỏi này quá cơ bản"
+- Dùng emoji ✅ ❌ 💡 làm nổi bật điểm quan trọng
 - Khuyến khích bạn thử tự làm trước khi xem đáp án
 
 Trả lời bằng tiếng Việt. Thân thiện như gia sư tốt nhất bạn từng gặp.
@@ -608,7 +950,9 @@ def build_kien_thuc_prompt(du_lieu: str, cau_hoi: str, lich_su: str = "") -> str
     prompt = f"Lịch sử trò chuyện:\n{lich_su}\n\n" if lich_su else ""
     prompt += f"""Bạn hỏi: {cau_hoi}
 
-Hãy giải thích kiến thức này theo cách dễ hiểu nhất, dùng ví dụ thực tế.
+Hãy giải thích theo cách dễ hiểu nhất, dùng ví dụ thực tế.
+Nhớ dùng ký hiệu ASCII thuần (*, ^, sqrt(), pi...) cho toán học.
+Nếu bài cần hình minh hoạ thì thêm [GENERATE_IMAGE: ...] ở cuối.
 Nếu câu hỏi chưa đủ rõ, hỏi thêm để giải thích trúng hơn."""
     return prompt
 
@@ -949,16 +1293,16 @@ class TuVanTuyenSinh:
         self.lich_su = []
         log.info("San sang!")
 
-    def hoi(self, cau_hoi: str) -> str:
+    def hoi(self, cau_hoi: str) -> dict:
         """
         Hàm duy nhất nhóm web cần gọi.
-        Nhận câu hỏi → xử lý toàn bộ pipeline → trả về câu trả lời.
-
-        Trả về có thể là:
-        - Câu trả lời thật sự
-        - Câu hỏi ngược lại để làm rõ thêm (nếu thông tin chưa đủ)
+        Nhận câu hỏi → xử lý toàn bộ pipeline → trả về dict:
+          {
+            "tra_loi": str,          # Câu trả lời văn bản (đã xóa tag [GENERATE_IMAGE])
+            "anh": list[str],        # List base64 PNG (rỗng nếu không vẽ hình)
+          }
         """
-        print(f"\n[Câu hỏi] {cau_hoi}")
+        log.info(f"[Câu hỏi] {cau_hoi}")
 
         # Bước 1: Orchestrator xác định agent và có cần hỏi thêm không
         agents, can_hoi_them = self._phan_loai(cau_hoi)
@@ -967,29 +1311,30 @@ class TuVanTuyenSinh:
         # Nếu Orchestrator thấy cần hỏi thêm VÀ chưa có lịch sử đủ để trả lời
         # → trả về câu hỏi thêm, nhưng vẫn lưu câu hỏi gốc vào lịch sử
         if can_hoi_them:
-            # Kiểm tra lịch sử — nếu đã có info trong context thì bỏ qua, cứ trả lời
             lich_su_dai = len(self.lich_su) >= 4
             if not lich_su_dai:
-                print(f"[Hỏi thêm] {can_hoi_them}")
-                # Lưu câu hỏi gốc vào lịch sử để lần sau dùng làm context
+                log.info(f"[Hỏi thêm] {can_hoi_them}")
                 self.lich_su.append({"role": "user", "content": cau_hoi})
                 self.lich_su.append({"role": "assistant", "content": can_hoi_them})
                 self.lich_su = self.lich_su[-20:]
-                return can_hoi_them
+                return {"tra_loi": can_hoi_them, "anh": []}
 
         # Bước 2: Mỗi agent tìm dữ liệu + trả lời độc lập
         ket_qua = {agent: self._chay_agent(agent, cau_hoi) for agent in agents}
 
         # Bước 3: Tổng hợp nếu nhiều agent, trả về luôn nếu chỉ 1
-        tra_loi = list(ket_qua.values())[0] if len(ket_qua) == 1 \
-                  else self._tong_hop(cau_hoi, ket_qua)
+        tra_loi_raw = list(ket_qua.values())[0] if len(ket_qua) == 1 \
+                      else self._tong_hop(cau_hoi, ket_qua)
 
-        # Lưu lịch sử hội thoại (tối đa 10 lượt gần nhất)
+        # Bước 4: Xử lý [GENERATE_IMAGE] — tách tag, vẽ hình, trả base64
+        tra_loi, anh_list = xu_ly_anh_trong_tra_loi(tra_loi_raw)
+
+        # Lưu lịch sử hội thoại (tối đa 20 lượt gần nhất)
         self.lich_su += [{"role": "user", "content": cau_hoi},
                          {"role": "assistant", "content": tra_loi}]
         self.lich_su = self.lich_su[-20:]
 
-        return tra_loi
+        return {"tra_loi": tra_loi, "anh": anh_list}
 
     def hoi_voi_anh(self, cau_hoi: str, image_base64: str, image_type: str = "image/jpeg") -> str:
         """
