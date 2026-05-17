@@ -1,5 +1,21 @@
 """
-app.py — FastAPI + Supabase auth + tuyen_sinh_AI
+app.py — Magerok AI v5
+Routes:
+  /                → landing page
+  /demo            → chat không cần đăng nhập
+  /login           → đăng nhập / đăng ký
+  /chat            → chat có auth + lịch sử Supabase
+  /reset-password  → đặt lại mật khẩu (từ link email)
+  /verify          → xác nhận email đăng ký
+  /health          → health check
+
+API:
+  POST /demo/hoi         → chat không auth
+  POST /hoi              → chat có auth, lưu lịch sử Supabase
+  POST /reset            → reset session bot
+  GET  /histories        → danh sách lịch sử (auth)
+  GET  /histories/{id}   → messages của 1 cuộc trò chuyện (auth)
+  DELETE /histories/{id} → xóa cuộc trò chuyện (auth)
 """
 
 import os
@@ -12,7 +28,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from tuyen_sinh_AI import TuVanTuyenSinh
 
-# Supabase Python client để verify JWT
+# ── Supabase ──────────────────────────────────────────────────────────────────
 try:
     from supabase import create_client, Client as SupabaseClient
     _SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
@@ -21,7 +37,7 @@ try:
 except ImportError:
     sb = None
 
-# ── Session store ─────────────────────────────────────────────────────────────
+# ── Session store (in-memory) ─────────────────────────────────────────────────
 sessions: dict[str, TuVanTuyenSinh] = {}
 
 def lay_bot(session_id: str) -> TuVanTuyenSinh:
@@ -31,11 +47,10 @@ def lay_bot(session_id: str) -> TuVanTuyenSinh:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    lay_bot("default")
+    lay_bot("demo")
     yield
 
-app = FastAPI(title="Magerok AI", version="3.0.0", lifespan=lifespan)
-
+app = FastAPI(title="Magerok AI", version="5.0.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -43,112 +58,118 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Auth helper ───────────────────────────────────────────────────────────────
+# ── Auth helpers ──────────────────────────────────────────────────────────────
 def get_user_id(authorization: Optional[str] = Header(default=None)) -> str:
-    """
-    Lấy user_id từ Supabase JWT trong header Authorization: Bearer <token>
-    Nếu chưa cấu hình Supabase → fallback về 'anonymous' (dev mode)
-    """
     if not sb or not _SUPABASE_URL:
-        return "anonymous"  # dev mode — không cần auth
+        return "anonymous"
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Chưa đăng nhập.")
     token = authorization.split(" ", 1)[1]
     try:
-        user = sb.auth.get_user(token)
-        return user.user.id
+        return sb.auth.get_user(token).user.id
     except Exception:
         raise HTTPException(status_code=401, detail="Token không hợp lệ hoặc đã hết hạn.")
 
+def get_user_optional(authorization: Optional[str] = Header(default=None)) -> Optional[str]:
+    if not sb or not authorization or not authorization.startswith("Bearer "):
+        return None
+    try:
+        return sb.auth.get_user(authorization.split(" ", 1)[1]).user.id
+    except Exception:
+        return None
+
 # ── Schemas ───────────────────────────────────────────────────────────────────
 class CauHoiRequest(BaseModel):
-    cau_hoi: str = ""
+    cau_hoi:      str = ""
+    history_id:   Optional[str] = None
     image_base64: Optional[str] = None
-    image_type: Optional[str] = "image/jpeg"
-    history_id: Optional[str] = None   # dùng để ghép lịch sử (frontend gửi lên, hiện tại bỏ qua — bot tự giữ state)
+    image_type:   Optional[str] = "image/jpeg"
 
 class TraLoiResponse(BaseModel):
-    tra_loi: str
-    anh: list[str] = []   # list base64 PNG — rỗng nếu không có hình vẽ
-    history_id: Optional[str] = None   # trả về để frontend lưu vào sidebar
-    user_id: str
+    tra_loi:    str
+    anh:        list[str] = []
+    user_id:    str
+    history_id: Optional[str] = None
 
-class ResetRequest(BaseModel):
-    pass  # user_id lấy từ token
-
-# ── Serve static ──────────────────────────────────────────────────────────────
-_BASE = os.path.dirname(os.path.abspath(__file__))
+# ── Static files ──────────────────────────────────────────────────────────────
+_BASE   = os.path.dirname(os.path.abspath(__file__))
 _static = os.path.join(_BASE, "static")
 if os.path.exists(_static):
     app.mount("/static", StaticFiles(directory=_static), name="static")
 
-@app.api_route("/", methods=["GET", "HEAD"])
-def root():
-    for p in [os.path.join(_BASE, "static", "login.html"),
-              os.path.join(_BASE, "login.html")]:
-        if os.path.exists(p):
-            return FileResponse(p, media_type="text/html")
-    return {"status": "ok", "message": "Magerok AI 🎓"}
+def _page(name: str) -> FileResponse:
+    path = os.path.join(_static, name)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail=f"{name} không tìm thấy.")
+    return FileResponse(path, media_type="text/html")
 
-@app.api_route("/health", methods=["GET", "HEAD"])
-def health():
-    return {"status": "ok"}
+# ── Page routes ───────────────────────────────────────────────────────────────
+@app.api_route("/",               methods=["GET", "HEAD"])
+def root():       return _page("landing.html")
 
-# ── Chat endpoints ────────────────────────────────────────────────────────────
+@app.api_route("/demo",           methods=["GET", "HEAD"])
+def demo():       return _page("demo.html")
+
+@app.api_route("/login",          methods=["GET", "HEAD"])
+def login():      return _page("login.html")
+
+@app.api_route("/chat",           methods=["GET", "HEAD"])
+def chat():       return _page("chat.html")
+
+@app.api_route("/reset-password", methods=["GET", "HEAD"])
+def reset_pw():   return _page("reset-password.html")
+
+@app.api_route("/verify",         methods=["GET", "HEAD"])
+def verify():     return _page("verify.html")
+
+@app.api_route("/health",         methods=["GET", "HEAD"])
+def health():     return {"status": "ok"}
+
+# ── Demo chat (không auth) ────────────────────────────────────────────────────
+@app.post("/demo/hoi")
+def demo_hoi(body: CauHoiRequest):
+    if not body.cau_hoi.strip() and not body.image_base64:
+        raise HTTPException(status_code=400, detail="Câu hỏi không được để trống.")
+    try:
+        bot     = lay_bot("demo")
+        ket_qua = _goi_bot(bot, body)
+        return {"tra_loi": ket_qua["tra_loi"], "anh": ket_qua.get("anh", [])}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ── Authenticated chat ────────────────────────────────────────────────────────
 @app.post("/hoi", response_model=TraLoiResponse)
 def hoi(body: CauHoiRequest, user_id: str = Depends(get_user_id)):
     if not body.cau_hoi.strip() and not body.image_base64:
         raise HTTPException(status_code=400, detail="Câu hỏi không được để trống.")
+
+    history_id = body.history_id
+    if not history_id and sb:
+        res = sb.table("chat_histories").insert({
+            "user_id": user_id,
+            "title": (body.cau_hoi[:60] or "Cuộc trò chuyện mới"),
+        }).execute()
+        history_id = res.data[0]["id"]
+
     try:
-        bot = lay_bot(user_id)  # mỗi user có bot riêng
-        if body.image_base64:
-            ket_qua = bot.hoi_voi_anh(
-                cau_hoi=body.cau_hoi or "(Xem ảnh đính kèm)",
-                image_base64=body.image_base64,
-                image_type=body.image_type or "image/jpeg",
-            )
-            if isinstance(ket_qua, str):
-                ket_qua = {"tra_loi": ket_qua, "anh": []}
-        else:
-            ket_qua = bot.hoi(body.cau_hoi)
-            if isinstance(ket_qua, str):
-                ket_qua = {"tra_loi": ket_qua, "anh": []}
-        return TraLoiResponse(
-            tra_loi=ket_qua["tra_loi"],
-            anh=ket_qua.get("anh", []),
-            history_id=body.history_id or user_id,   # trả lại để frontend dùng làm conv id
-            user_id=user_id,
-        )
+        bot     = lay_bot(user_id)
+        ket_qua = _goi_bot(bot, body)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    if sb and history_id:
+        sb.table("chat_messages").insert([
+            {"history_id": history_id, "role": "user",     "content": body.cau_hoi or "(ảnh)"},
+            {"history_id": history_id, "role": "assistant", "content": ket_qua["tra_loi"]},
+        ]).execute()
+        sb.table("chat_histories").update({"updated_at": "now()"}).eq("id", history_id).execute()
 
-# ── History endpoints (lịch sử hội thoại — lưu in-memory theo user) ──────────
-# Nếu bạn muốn lưu vào Supabase thật, thay các hàm này bằng Supabase client
-
-_histories: dict[str, list[dict]] = {}   # user_id → list of {id, title, updated_at}
-_history_msgs: dict[str, list[dict]] = {}  # history_id → list of {role, content}
-
-@app.get("/histories")
-def get_histories(user_id: str = Depends(get_user_id)):
-    """Trả danh sách lịch sử chat của user."""
-    return _histories.get(user_id, [])
-
-@app.get("/histories/{history_id}")
-def get_history_messages(history_id: str, user_id: str = Depends(get_user_id)):
-    """Trả danh sách tin nhắn của một cuộc trò chuyện."""
-    msgs = _history_msgs.get(history_id, [])
-    return msgs
-
-@app.delete("/histories/{history_id}")
-def delete_history(history_id: str, user_id: str = Depends(get_user_id)):
-    """Xóa một cuộc trò chuyện."""
-    _history_msgs.pop(history_id, None)
-    if user_id in _histories:
-        _histories[user_id] = [h for h in _histories[user_id] if h["id"] != history_id]
-    # Xóa bot session tương ứng
-    sessions.pop(history_id, None)
-    return {"status": "ok"}
+    return TraLoiResponse(
+        tra_loi=ket_qua["tra_loi"],
+        anh=ket_qua.get("anh", []),
+        user_id=user_id,
+        history_id=history_id,
+    )
 
 @app.post("/reset")
 def reset(user_id: str = Depends(get_user_id)):
@@ -156,6 +177,61 @@ def reset(user_id: str = Depends(get_user_id)):
         sessions[user_id].reset_lich_su()
     return {"status": "ok"}
 
+# ── History API ───────────────────────────────────────────────────────────────
+@app.get("/histories")
+def get_histories(user_id: str = Depends(get_user_id)):
+    if not sb:
+        return []
+    res = sb.table("chat_histories")\
+        .select("id,title,created_at,updated_at")\
+        .eq("user_id", user_id)\
+        .order("updated_at", desc=True)\
+        .limit(50).execute()
+    return res.data
+
+@app.get("/histories/{history_id}")
+def get_messages(history_id: str, user_id: str = Depends(get_user_id)):
+    if not sb:
+        return []
+    check = sb.table("chat_histories")\
+        .select("id").eq("id", history_id).eq("user_id", user_id).execute()
+    if not check.data:
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập.")
+    res = sb.table("chat_messages")\
+        .select("role,content,created_at")\
+        .eq("history_id", history_id)\
+        .order("created_at").execute()
+    return res.data
+
+@app.delete("/histories/{history_id}")
+def delete_history(history_id: str, user_id: str = Depends(get_user_id)):
+    if not sb:
+        return {"status": "ok"}
+    check = sb.table("chat_histories")\
+        .select("id").eq("id", history_id).eq("user_id", user_id).execute()
+    if not check.data:
+        raise HTTPException(status_code=403, detail="Không có quyền.")
+    sb.table("chat_messages").delete().eq("history_id", history_id).execute()
+    sb.table("chat_histories").delete().eq("id", history_id).execute()
+    if user_id in sessions:
+        sessions[user_id].reset_lich_su()
+    return {"status": "ok"}
+
+# ── Helper nội bộ ─────────────────────────────────────────────────────────────
+def _goi_bot(bot: TuVanTuyenSinh, body: CauHoiRequest) -> dict:
+    if body.image_base64:
+        ket_qua = bot.hoi_voi_anh(
+            cau_hoi=body.cau_hoi or "(Xem ảnh đính kèm)",
+            image_base64=body.image_base64,
+            image_type=body.image_type or "image/jpeg",
+        )
+    else:
+        ket_qua = bot.hoi(body.cau_hoi)
+    if isinstance(ket_qua, str):
+        return {"tra_loi": ket_qua, "anh": []}
+    return {"tra_loi": ket_qua.get("tra_loi", ""), "anh": ket_qua.get("anh", [])}
+
+# ── Dev server ────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
