@@ -552,14 +552,13 @@ async function loadConversations() {
     const res = await fetch('/histories', {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
-    if (!res.ok) return;
+    if (!res.ok) { conversations = []; renderSidebar(); return; }
     const data = await res.json();
-    // Chuyển format Supabase → format local
     conversations = data.map(h => ({
       id:       h.id,
       title:    h.title,
-      messages: [],          // load lazy khi click
-      ts:       new Date(h.updated_at).getTime(),
+      messages: [],
+      ts:       new Date(h.updated_at || Date.now()).getTime(),
       loaded:   false
     }));
   } catch(_) { conversations = []; }
@@ -754,10 +753,29 @@ async function sendMessage() {
     // Lưu history_id từ server để dùng cho tin nhắn tiếp theo
     if (data.history_id && !currentHistoryId) {
       currentHistoryId = data.history_id;
-      // Cập nhật id của conv local để khớp với Supabase
       if (conv) conv.id = data.history_id;
       activeId = data.history_id;
       renderSidebar();
+    }
+
+    // Hiển thị ảnh vẽ (nếu có) trước câu trả lời text
+    if (data.anh && data.anh.length > 0) {
+      data.anh.forEach(b64 => {
+        const imgRow = document.createElement('div');
+        imgRow.className = 'msg-row';
+        imgRow.innerHTML = `
+          <div class="msg-avatar ai">
+            <svg width="16" height="16" viewBox="0 0 64 64" fill="none">
+              <path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="white" stroke-width="3.2" opacity="0.92"/>
+              <path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="white" stroke-width="2.4"/>
+            </svg>
+          </div>
+          <div class="msg-bubble ai">
+            <img src="data:image/png;base64,${b64}" class="msg-img ai" alt="Hình minh hoạ" style="max-width:100%;border-radius:10px;margin-bottom:4px;"/>
+          </div>`;
+        document.getElementById('messages').appendChild(imgRow);
+        scrollBottom();
+      });
     }
 
     // Simulate streaming word by word
