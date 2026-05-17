@@ -420,7 +420,7 @@
     const email = document.getElementById('email').value.trim();
     if (!email) { showAlert('Nhập email của bạn rồi nhấn "Quên mật khẩu".'); return; }
     const { error } = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/login.html'
+      redirectTo: window.location.origin + '/reset-password'
     });
     if (error) showAlert(error.message);
     else showAlert('Đã gửi link đặt lại mật khẩu. Kiểm tra email nhé!', 'success');

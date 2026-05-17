@@ -2,7 +2,8 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox=\'0 0 64 64\' fill=\'none\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Crect width=\'64\' height=\'64\' rx=\'14\' fill=\'%231F3A5F\'/%3E%3Ccircle cx=\'32\' cy=\'30\' r=\'21\' stroke=\'white\' stroke-width=\'3\' opacity=\'.9\'/%3E%3Cpath d=\'M32 13L40 30L32 47L24 30Z\' fill=\'%232EC4B6\'/%3E%3Cpath d=\'M26 49L20 58L32 55L26 49Z\' fill=\'white\' opacity=\'.9\'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 64 64' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='64' height='64' rx='14' fill='%231F3A5F'/%3E%3Cpath d='M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z' stroke='white' stroke-width='3.2' opacity='.92'/%3E%3Cpath d='M32 18L37.8 30L32 42L26.2 30L32 18Z' fill='%232EC4B6' stroke='white' stroke-width='2.4'/%3E%3Cpath d='M23 48L17 56L29 53.6L23 48Z' fill='white' opacity='.92'/%3E%3C/svg%3E">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dùng thử · Magerok — AI tư vấn tuyển sinh cá nhân hóa</title>
   <meta name="description" content="Magerok là website AI tư vấn tuyển sinh giúp học sinh và phụ huynh chọn ngành, chọn trường, theo dõi deadline, tìm học bổng và xây lộ trình hồ sơ." />
@@ -1236,10 +1237,10 @@
       <a href="#top" class="brand" aria-label="Magerok home">
         <div class="brand-mark" aria-hidden="true">
           <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="32" cy="30" r="21" stroke="white" stroke-width="3" opacity="0.9"/>
-            <path d="M32 13L40 30L32 47L24 30Z" fill="#2EC4B6"/>
-            <path d="M32 13L40 30L32 47L24 30Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
-            <path d="M26 49L20 58L32 55L26 49Z" fill="white" opacity="0.9"/>
+            <rect width="64" height="64" rx="16" fill="#1F3A5F"/>
+            <path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="white" stroke-width="3.2" opacity="0.92"/>
+            <path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="white" stroke-width="2.4"/>
+            <path d="M23 48L17 56L29 53.6L23 48Z" fill="white" opacity="0.92"/>
           </svg>
         </div>
         <div class="brand-text">
@@ -1249,16 +1250,13 @@
       </a>
 
       <nav class="nav-links">
-        <a href="#features">Tính năng</a>
         <a href="#chat-section">Trò chuyện AI</a>
-        <a href="#workflow">Quy trình</a>
-        <a href="#brand">Branding</a>
         <a href="#faq">FAQ</a>
       </nav>
 
       <div class="nav-actions">
         <a class="btn btn-secondary" href="#chat-section">Chat với AI</a>
-        <a class="btn btn-primary" href="#contact">Bắt đầu ngay</a>
+        <a class="btn btn-primary" href="/login">Đăng nhập</a>
       </div>
     </div>
   </header>
@@ -1274,7 +1272,7 @@
           </p>
           <div class="hero-cta">
             <a href="#chat-section" class="btn btn-primary">Trò chuyện với AI</a>
-            <a href="#brand" class="btn btn-secondary">Xem logo & style guide</a>
+            
           </div>
           <div class="quick-actions">
             <span class="chip" onclick="insertAndSend('Mình học giỏi Toán, thích lĩnh vực công nghệ. Gợi ý ngành phù hợp cho mình?')">Chọn ngành phù hợp</span>
@@ -1411,10 +1409,12 @@
           <div class="chat-messages" id="chatMessages">
             <div class="chat-empty" id="emptyState">
               <div class="empty-icon">
-                <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="#1F3A5F" stroke-width="3.2" opacity="0.92"/>
-                  <path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="#1F3A5F" stroke-width="2.4"/>
-                </svg>
+                <svg width="34" height="34" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="64" height="64" rx="16" fill="#1F3A5F"/>
+            <path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="white" stroke-width="3.2" opacity="0.92"/>
+            <path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="white" stroke-width="2.4"/>
+            <path d="M23 48L17 56L29 53.6L23 48Z" fill="white" opacity="0.92"/>
+          </svg>
               </div>
               <h4>Xin chào! Mình là Magerok AI 👋</h4>
               <p>Hỏi mình về ngành học, trường đại học, học bổng hoặc upload hồ sơ để được tư vấn cá nhân hóa.</p>
@@ -1498,36 +1498,7 @@
       </div>
     </section>
 
-    <section id="workflow" class="container reveal">
-      <div class="section-head">
-        <div>
-          <h2>Quy trình AI tư vấn tuyển sinh của Magerok</h2>
-          <p>Phần này mô phỏng một luồng sản phẩm hoàn chỉnh để người dùng hiểu AI không chỉ "trả lời câu hỏi", mà còn dẫn họ đi hết hành trình tuyển sinh.</p>
-        </div>
-      </div>
-      <div class="timeline">
-        <article class="timeline-step">
-          <span>1</span>
-          <h3>Thu thập nhu cầu</h3>
-          <p>AI hỏi về học lực, sở thích, tài chính, địa điểm học, xu hướng nghề nghiệp và mức độ ưu tiên từng tiêu chí.</p>
-        </article>
-        <article class="timeline-step">
-          <span>2</span>
-          <h3>Phân tích & gợi ý</h3>
-          <p>Trả về shortlist ngành học, trường phù hợp, lý do chọn và các điểm cần cân nhắc để tránh chọn sai.</p>
-        </article>
-        <article class="timeline-step">
-          <span>3</span>
-          <h3>Lập lộ trình hồ sơ</h3>
-          <p>Tạo checklist gồm deadline, giấy tờ, học bổng, kỳ thi và các hành động ưu tiên trong 30–90 ngày.</p>
-        </article>
-        <article class="timeline-step">
-          <span>4</span>
-          <h3>Chuyển đổi thành lead</h3>
-          <p>Khi người dùng đủ quan tâm, hệ thống đẩy sang form, lịch hẹn hoặc cố vấn thật để tiếp tục chăm sóc.</p>
-        </article>
-      </div>
-    </section>
+    
 
     
 
@@ -1558,20 +1529,7 @@
 
 
 
-    <section id="faq" class="container reveal">
-      <div class="section-head">
-        <div>
-          <h2>FAQ mẫu cho web tuyển sinh</h2>
-          <p>FAQ là vùng rất quan trọng để giải toả băn khoăn của học sinh và phụ huynh, đồng thời hỗ trợ SEO nội dung sau này.</p>
-        </div>
-      </div>
-      <div class="faq">
-        <div class="faq-item"><h3>Magerok có thay thế hoàn toàn cố vấn tuyển sinh không?</h3><p>Không. Cách tốt nhất là dùng AI để sàng lọc, giải thích, gợi ý nhanh và chuyển những ca cần độ sâu sang người thật.</p></div>
-        <div class="faq-item"><h3>AI có thể giúp tìm học bổng không?</h3><p>Có. Bạn có thể tích hợp dữ liệu học bổng hoặc API bên ngoài để AI lọc theo hồ sơ, ngân sách và mục tiêu du học/nội địa.</p></div>
-        <div class="faq-item"><h3>Tôi có thể upload hồ sơ để AI phân tích không?</h3><p>Có. Khung chat hỗ trợ upload PDF, ảnh và file Word. AI sẽ đọc và phân tích nguyện vọng, điểm mạnh/yếu của hồ sơ ngay trong cuộc trò chuyện.</p></div>
-        <div class="faq-item"><h3>Web này có responsive không?</h3><p>Có. File HTML đã có CSS responsive cho desktop, tablet và mobile, phù hợp để triển khai landing page hoặc bản MVP.</p></div>
-      </div>
-    </section>
+    
 
     <section id="contact" class="container reveal">
       <div class="contact-cta">
@@ -1611,7 +1569,21 @@
         </div>
       </div>
     </section>
-  </main>
+  <section id="faq" class="container reveal">
+      <div class="section-head">
+        <div>
+          <h2>FAQ mẫu cho web tuyển sinh</h2>
+          <p>FAQ là vùng rất quan trọng để giải toả băn khoăn của học sinh và phụ huynh, đồng thời hỗ trợ SEO nội dung sau này.</p>
+        </div>
+      </div>
+      <div class="faq">
+        <div class="faq-item"><h3>Magerok có thay thế hoàn toàn cố vấn tuyển sinh không?</h3><p>Không. Cách tốt nhất là dùng AI để sàng lọc, giải thích, gợi ý nhanh và chuyển những ca cần độ sâu sang người thật.</p></div>
+        <div class="faq-item"><h3>AI có thể giúp tìm học bổng không?</h3><p>Có. Bạn có thể tích hợp dữ liệu học bổng hoặc API bên ngoài để AI lọc theo hồ sơ, ngân sách và mục tiêu du học/nội địa.</p></div>
+        <div class="faq-item"><h3>Tôi có thể upload hồ sơ để AI phân tích không?</h3><p>Có. Khung chat hỗ trợ upload PDF, ảnh và file Word. AI sẽ đọc và phân tích nguyện vọng, điểm mạnh/yếu của hồ sơ ngay trong cuộc trò chuyện.</p></div>
+        <div class="faq-item"><h3>Web này có responsive không?</h3><p>Có. File HTML đã có CSS responsive cho desktop, tablet và mobile, phù hợp để triển khai landing page hoặc bản MVP.</p></div>
+      </div>
+    </section>
+</main>
 
   <footer class="container">
     <div class="footer-grid">
@@ -1941,7 +1913,7 @@ Phong cách trả lời:
       const avatarHtml = role === 'user'
         ? `<div class="msg-avatar user-avatar-icon">HS</div>`
         : `<div class="msg-avatar ai-avatar">
-            <svg width="16" height="16" viewBox="0 0 64 64" fill="none"><path d="M32 10C21 10 12 19 12 30C12 41 21 50 32 50C43 50 52 41 52 30C52 19 43 10 32 10Z" stroke="white" stroke-width="3"/><path d="M32 19L37 30L32 41L27 30L32 19Z" fill="#2EC4B6" stroke="white" stroke-width="2"/></svg>
+            <svg width="16" height="16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="white" stroke-width="3.2" opacity="0.92"/><path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="white" stroke-width="2.4"/><path d="M23 48L17 56L29 53.6L23 48Z" fill="white" opacity="0.92"/></svg>
           </div>`;
 
       let innerContent = '';
@@ -1971,7 +1943,7 @@ Phong cách trả lời:
       row.id = id;
       row.innerHTML = `
         <div class="msg-avatar ai-avatar">
-          <svg width="16" height="16" viewBox="0 0 64 64" fill="none"><path d="M32 10C21 10 12 19 12 30C12 41 21 50 32 50C43 50 52 41 52 30C52 19 43 10 32 10Z" stroke="white" stroke-width="3"/><path d="M32 19L37 30L32 41L27 30L32 19Z" fill="#2EC4B6" stroke="white" stroke-width="2"/></svg>
+          <svg width="16" height="16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M32 8C19.85 8 10 17.85 10 30C10 42.15 19.85 52 32 52C44.15 52 54 42.15 54 30C54 17.85 44.15 8 32 8Z" stroke="white" stroke-width="3.2" opacity="0.92"/><path d="M32 18L37.8 30L32 42L26.2 30L32 18Z" fill="#2EC4B6" stroke="white" stroke-width="2.4"/><path d="M23 48L17 56L29 53.6L23 48Z" fill="white" opacity="0.92"/></svg>
         </div>
         <div class="msg-bubble ai-bubble">
           <div class="typing-indicator">
