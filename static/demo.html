@@ -1227,9 +1227,38 @@
       .hero h1 { font-size: clamp(34px, 10vw, 48px); }
       .msg-bubble { max-width: 85%; }
     }
+
+    /* ── Drag & drop overlay ── */
+    .drop-overlay{
+      display:none;position:fixed;inset:0;z-index:9999;
+      background:rgba(31,58,95,0.55);backdrop-filter:blur(4px);
+      align-items:center;justify-content:center;flex-direction:column;
+      pointer-events:none;
+    }
+    .drop-overlay.active{display:flex}
+    .drop-box{
+      border:2.5px dashed rgba(46,196,182,0.8);border-radius:24px;
+      padding:48px 64px;text-align:center;
+      background:rgba(255,255,255,0.08);
+    }
+    .drop-box svg{opacity:.9;margin-bottom:12px;display:block;margin-inline:auto}
+    .drop-box p{color:#fff;font-size:17px;font-weight:600;margin:0 0 4px}
+    .drop-box span{color:rgba(255,255,255,0.65);font-size:13px}
   </style>
 </head>
 <body>
+
+<!-- Drag & Drop Overlay -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-box">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2EC4B6" stroke-width="1.8" stroke-linecap="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p>Thả ảnh vào đây</p>
+    <span>Hỗ trợ JPG, PNG, GIF, WEBP</span>
+  </div>
+</div>
 <div style="background:linear-gradient(135deg,#1F3A5F,#4E7FB6);color:#fff;text-align:center;padding:9px 20px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap"><span>💡 Bạn đang dùng thử — lịch sử chat sẽ không được lưu</span><a href="/login" style="background:#2EC4B6;color:#fff;padding:4px 14px;border-radius:100px;font-weight:600;font-size:12px;text-decoration:none;white-space:nowrap">Đăng nhập để lưu lịch sử →</a></div>
 
   <header>
@@ -1770,6 +1799,64 @@ Phong cách trả lời:
       pendingFile = null;
       document.getElementById('fileIndicator').style.display = 'none';
     }
+
+    /* ── Paste ảnh từ clipboard (Ctrl+V) ─────────────────────────── */
+    document.addEventListener('paste', (e) => {
+      const items = Array.from(e.clipboardData?.items || []);
+      const imgItem = items.find(it => it.type.startsWith('image/'));
+      if (!imgItem) return;
+      e.preventDefault();
+      const file = imgItem.getAsFile();
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingFile = {
+          name:      'clipboard-image.png',
+          base64:    reader.result.split(',')[1],
+          mediaType: file.type || 'image/png',
+          dataUrl:   reader.result,
+        };
+        const ind = document.getElementById('fileIndicator');
+        ind.style.display = 'flex';
+        document.getElementById('fileIndicatorName').textContent = '📋 Ảnh từ clipboard';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    /* ── Drag & Drop ảnh ─────────────────────────────────────────── */
+    let _dragCounter = 0;
+    document.addEventListener('dragenter', (e) => {
+      if (!Array.from(e.dataTransfer?.items||[]).some(i=>i.kind==='file')) return;
+      _dragCounter++;
+      document.getElementById('dropOverlay').classList.add('active');
+    });
+    document.addEventListener('dragleave', () => {
+      _dragCounter--;
+      if (_dragCounter <= 0) {
+        _dragCounter = 0;
+        document.getElementById('dropOverlay').classList.remove('active');
+      }
+    });
+    document.addEventListener('dragover', (e) => e.preventDefault());
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      _dragCounter = 0;
+      document.getElementById('dropOverlay').classList.remove('active');
+      const file = Array.from(e.dataTransfer?.files||[]).find(f=>f.type.startsWith('image/'));
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        pendingFile = {
+          name:      file.name,
+          base64:    reader.result.split(',')[1],
+          mediaType: file.type || 'image/png',
+          dataUrl:   reader.result,
+        };
+        const ind = document.getElementById('fileIndicator');
+        ind.style.display = 'flex';
+        document.getElementById('fileIndicatorName').textContent = file.name;
+      };
+      reader.readAsDataURL(file);
+    });
 
     /* =========================================
        SEND / RECEIVE

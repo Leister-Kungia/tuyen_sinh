@@ -393,6 +393,23 @@ body{
   font-size:.68rem;color:rgba(107,122,141,.5);
 }
 
+/* ── Drag & drop overlay ─────────────────────────────────────────── */
+.drop-overlay{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(31,58,95,0.55);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;flex-direction:column;gap:12px;
+  pointer-events:none;
+}
+.drop-overlay.active{display:flex}
+.drop-box{
+  border:2.5px dashed rgba(46,196,182,0.8);border-radius:24px;
+  padding:48px 64px;text-align:center;
+  background:rgba(255,255,255,0.08);
+}
+.drop-box svg{opacity:.9;margin-bottom:12px}
+.drop-box p{color:#fff;font-size:17px;font-weight:600;margin:0}
+.drop-box span{color:rgba(255,255,255,0.65);font-size:13px}
+
 /* Mobile overlay */
 .sb-overlay{
   display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9;
@@ -416,6 +433,18 @@ body{
 
 <!-- Sidebar overlay (mobile) -->
 <div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- Drag & Drop Overlay -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-box">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2EC4B6" stroke-width="1.8" stroke-linecap="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p>Thả ảnh vào đây</p>
+    <span>Hỗ trợ JPG, PNG, GIF, WEBP</span>
+  </div>
+</div>
 
 <!-- ── SIDEBAR ── -->
 <aside id="sidebar">
@@ -710,6 +739,79 @@ function removeFile() {
   document.getElementById('btn-upload').classList.remove('has-file');
   document.getElementById('file-input').value = '';
 }
+
+/* ── Paste ảnh từ clipboard (Ctrl+V) ────────────────────────────── */
+document.addEventListener('paste', (e) => {
+  const items = Array.from(e.clipboardData?.items || []);
+  const imgItems = items.filter(it => it.type.startsWith('image/'));
+  if (!imgItems.length) return;
+  e.preventDefault();
+  const reads = imgItems.map(it => new Promise(resolve => {
+    const file = it.getAsFile();
+    const reader = new FileReader();
+    reader.onload = () => resolve({
+      base64:     reader.result.split(',')[1],
+      media_type: file.type || 'image/png',
+      name:       `clipboard-${Date.now()}.png`,
+      dataUrl:    reader.result,
+    });
+    reader.readAsDataURL(file);
+  }));
+  Promise.all(reads).then(results => {
+    pendingFiles = [...pendingFiles, ...results];
+    const ind = document.getElementById('file-indicator');
+    const nm  = document.getElementById('file-name');
+    ind.classList.add('show');
+    nm.textContent = pendingFiles.length === 1
+      ? '📋 Ảnh từ clipboard'
+      : `📋 ${pendingFiles.length} ảnh từ clipboard`;
+    document.getElementById('btn-upload').classList.add('has-file');
+  });
+});
+
+/* ── Drag & Drop ảnh ─────────────────────────────────────────────── */
+let dragCounter = 0;
+document.addEventListener('dragenter', (e) => {
+  if (!Array.from(e.dataTransfer?.items||[]).some(i=>i.kind==='file')) return;
+  dragCounter++;
+  document.getElementById('dropOverlay').classList.add('active');
+});
+document.addEventListener('dragleave', () => {
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    document.getElementById('dropOverlay').classList.remove('active');
+  }
+});
+document.addEventListener('dragover', (e) => e.preventDefault());
+document.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragCounter = 0;
+  document.getElementById('dropOverlay').classList.remove('active');
+  const files = Array.from(e.dataTransfer?.files || [])
+    .filter(f => f.type.startsWith('image/') || f.size < 10*1024*1024);
+  if (!files.length) return;
+  const reads = files.map(file => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = () => resolve({
+      base64:     reader.result.split(',')[1],
+      media_type: file.type || 'image/png',
+      name:       file.name,
+      dataUrl:    reader.result,
+    });
+    reader.readAsDataURL(file);
+  }));
+  Promise.all(reads).then(results => {
+    pendingFiles = [...pendingFiles, ...results];
+    const ind = document.getElementById('file-indicator');
+    const nm  = document.getElementById('file-name');
+    ind.classList.add('show');
+    nm.textContent = pendingFiles.length === 1
+      ? pendingFiles[0].name
+      : `${pendingFiles.length} file: ${pendingFiles.map(f=>f.name).join(', ')}`;
+    document.getElementById('btn-upload').classList.add('has-file');
+  });
+});
 
 /* ── Send ────────────────────────────────────────────────────────── */
 function handleKey(e) {
