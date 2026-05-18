@@ -31,11 +31,18 @@ from tuyen_sinh_AI import TuVanTuyenSinh
 # ── Supabase ──────────────────────────────────────────────────────────────────
 try:
     from supabase import create_client, Client as SupabaseClient
-    _SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
-    _SUPABASE_ANON = os.getenv("SUPABASE_ANON_KEY", "")
-    sb: SupabaseClient = create_client(_SUPABASE_URL, _SUPABASE_ANON) if _SUPABASE_URL else None
+    _SUPABASE_URL     = os.getenv("SUPABASE_URL", "")
+    _SUPABASE_ANON    = os.getenv("SUPABASE_ANON_KEY", "")
+    _SUPABASE_SERVICE = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+    # sb_auth: dùng anon key để verify JWT token của user
+    sb_auth: SupabaseClient = create_client(_SUPABASE_URL, _SUPABASE_ANON)  if _SUPABASE_URL else None
+    # sb_db:   dùng service_role key để đọc/ghi DB (bypass RLS)
+    sb: SupabaseClient      = create_client(_SUPABASE_URL, _SUPABASE_SERVICE) if (_SUPABASE_URL and _SUPABASE_SERVICE) else sb_auth
 except ImportError:
     sb = None
+    sb_auth = None
+    _SUPABASE_URL = _SUPABASE_ANON = _SUPABASE_SERVICE = ""
 
 # ── Session store (in-memory) ─────────────────────────────────────────────────
 sessions: dict[str, TuVanTuyenSinh] = {}
@@ -60,21 +67,21 @@ app.add_middleware(
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
 def get_user_id(authorization: Optional[str] = Header(default=None)) -> str:
-    if not sb or not _SUPABASE_URL:
+    if not sb_auth or not _SUPABASE_URL:
         return "anonymous"
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Chưa đăng nhập.")
     token = authorization.split(" ", 1)[1]
     try:
-        return sb.auth.get_user(token).user.id
+        return sb_auth.auth.get_user(token).user.id
     except Exception:
         raise HTTPException(status_code=401, detail="Token không hợp lệ hoặc đã hết hạn.")
 
 def get_user_optional(authorization: Optional[str] = Header(default=None)) -> Optional[str]:
-    if not sb or not authorization or not authorization.startswith("Bearer "):
+    if not sb_auth or not authorization or not authorization.startswith("Bearer "):
         return None
     try:
-        return sb.auth.get_user(authorization.split(" ", 1)[1]).user.id
+        return sb_auth.auth.get_user(authorization.split(" ", 1)[1]).user.id
     except Exception:
         return None
 
