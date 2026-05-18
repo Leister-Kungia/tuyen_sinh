@@ -18,12 +18,14 @@ API:
   DELETE /histories/{id} → xóa cuộc trò chuyện (auth)
 """
 
+import os
 import json as _json
+from contextlib import asynccontextmanager
 from fastapi.responses import StreamingResponse
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from tuyen_sinh_AI import TuVanTuyenSinh
