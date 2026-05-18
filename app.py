@@ -33,11 +33,16 @@ from tuyen_sinh_AI import TuVanTuyenSinh
 # ── Supabase ──────────────────────────────────────────────────────────────────
 try:
     from supabase import create_client, Client as SupabaseClient
-    _SUPABASE_URL  = os.getenv("SUPABASE_URL", "")
-    _SUPABASE_ANON = os.getenv("SUPABASE_ANON_KEY", "")
-    sb: SupabaseClient = create_client(_SUPABASE_URL, _SUPABASE_ANON) if _SUPABASE_URL else None
+    _SUPABASE_URL     = os.getenv("SUPABASE_URL", "")
+    _SUPABASE_ANON    = os.getenv("SUPABASE_ANON_KEY", "")
+    _SUPABASE_SERVICE = os.getenv("SUPABASE_SERVICE_KEY", "")
+    # Client thường — dùng cho auth (verify token user)
+    sb: SupabaseClient       = create_client(_SUPABASE_URL, _SUPABASE_ANON)    if _SUPABASE_URL else None
+    # Admin client — dùng cho thao tác DB không bị RLS chặn (histories, messages)
+    sb_admin: SupabaseClient = create_client(_SUPABASE_URL, _SUPABASE_SERVICE) if (_SUPABASE_URL and _SUPABASE_SERVICE) else sb
 except ImportError:
     sb = None
+    sb_admin = None
 
 # ── Session store (in-memory) ─────────────────────────────────────────────────
 sessions: dict[str, TuVanTuyenSinh] = {}
@@ -191,7 +196,7 @@ def hoi(body: CauHoiRequest, user_id: str = Depends(get_user_id)):
                 title = body.cau_hoi[:60] if body.cau_hoi.strip() else (
                     "📎 " + ", ".join(f.name for f in all_files[:2]) if all_files else "Cuộc trò chuyện mới"
                 )
-                res = sb.table("chat_histories").insert({
+                res = sb_admin.table("chat_histories").insert({
                     "user_id": user_id, "title": title,
                 }).execute()
                 history_id = res.data[0]["id"]
@@ -298,13 +303,13 @@ def hoi(body: CauHoiRequest, user_id: str = Depends(get_user_id)):
 
             # Bước 5: Lưu Supabase
             yield emit("progress", {"step": 5, "text": "💾 Đang lưu lịch sử trò chuyện…"})
-            if sb and history_id:
-                sb.table("chat_messages").insert([
+            if sb_admin and history_id:
+                sb_admin.table("chat_messages").insert([
                     {"history_id": history_id, "role": "user",      "content": body.cau_hoi or "(ảnh)"},
                     {"history_id": history_id, "role": "assistant",  "content": tra_loi_raw},
                 ]).execute()
                 from datetime import datetime, timezone
-                sb.table("chat_histories").update({
+                sb_admin.table("chat_histories").update({
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }).eq("id", history_id).execute()
 
@@ -333,9 +338,9 @@ def reset(user_id: str = Depends(get_user_id)):
 # ── History API ───────────────────────────────────────────────────────────────
 @app.get("/histories")
 def get_histories(user_id: str = Depends(get_user_id)):
-    if not sb:
+    if not sb_admin:
         return []
-    res = sb.table("chat_histories")\
+    res = sb_admin.table("chat_histories")\
         .select("id,title,created_at,updated_at")\
         .eq("user_id", user_id)\
         .order("updated_at", desc=True)\
@@ -344,13 +349,13 @@ def get_histories(user_id: str = Depends(get_user_id)):
 
 @app.get("/histories/{history_id}")
 def get_messages(history_id: str, user_id: str = Depends(get_user_id)):
-    if not sb:
+    if not sb_admin:
         return []
-    check = sb.table("chat_histories")\
+    check = sb_admin.table("chat_histories")\
         .select("id").eq("id", history_id).eq("user_id", user_id).execute()
     if not check.data:
         raise HTTPException(status_code=403, detail="Không có quyền truy cập.")
-    res = sb.table("chat_messages")\
+    res = sb_admin.table("chat_messages")\
         .select("role,content,created_at")\
         .eq("history_id", history_id)\
         .order("created_at").execute()
@@ -358,14 +363,14 @@ def get_messages(history_id: str, user_id: str = Depends(get_user_id)):
 
 @app.delete("/histories/{history_id}")
 def delete_history(history_id: str, user_id: str = Depends(get_user_id)):
-    if not sb:
+    if not sb_admin:
         return {"status": "ok"}
-    check = sb.table("chat_histories")\
+    check = sb_admin.table("chat_histories")\
         .select("id").eq("id", history_id).eq("user_id", user_id).execute()
     if not check.data:
         raise HTTPException(status_code=403, detail="Không có quyền.")
-    sb.table("chat_messages").delete().eq("history_id", history_id).execute()
-    sb.table("chat_histories").delete().eq("id", history_id).execute()
+    sb_admin.table("chat_messages").delete().eq("history_id", history_id).execute()
+    sb_admin.table("chat_histories").delete().eq("id", history_id).execute()
     if user_id in sessions:
         sessions[user_id].reset_lich_su()
     return {"status": "ok"}
