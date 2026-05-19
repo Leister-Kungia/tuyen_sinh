@@ -77,7 +77,18 @@ if not _CAN_DRAW:
 
 # ── API & Model ───────────────────────────────────────────────────────────────
 GROQ_API_KEY    = os.getenv("GROQ_API_KEY", "")   # lấy tại console.groq.com
-LLM_MODEL       = "llama-3.3-70b-versatile"        # miễn phí, mạnh, tiếng Việt tốt
+
+# Danh sách model fallback — thử theo thứ tự, tự động chuyển khi hết quota
+# Tất cả đều miễn phí trên Groq, quota độc lập nhau nên rotate rất hiệu quả
+LLM_MODELS = [
+    "llama-3.3-70b-versatile",      # mạnh nhất, tiếng Việt tốt nhất → dùng trước
+    "llama-3.1-70b-versatile",      # tương đương, quota riêng
+    "mixtral-8x7b-32768",           # context dài, ổn định
+    "gemma2-9b-it",                 # nhẹ hơn, vẫn đủ dùng
+    "llama-3.1-8b-instant",         # nhanh nhất, chỉ dùng khi hết tất cả trên
+]
+LLM_MODEL = LLM_MODELS[0]          # giữ biến này để tương thích code cũ (vision model v.v.)
+
 # EMBEDDING_MODEL không dùng — embedding chạy local qua ChromaDB DefaultEmbeddingFunction (ONNX)
 
 # ── ChromaDB ─────────────────────────────────────────────────────────────────
@@ -1393,18 +1404,49 @@ class TuVanTuyenSinh:
 
     # ── Các bước nội bộ ─────────────────────────────────────────────────────
 
+    def _goi_llm(self, messages: list[dict], max_tokens: int = 1200) -> str:
+        """
+        Gọi Groq với fallback tự động qua các model trong LLM_MODELS.
+        Khi một model bị rate-limit (429) hoặc lỗi, tự động thử model tiếp theo.
+        Nếu tất cả đều hết quota thì raise Exception để caller xử lý.
+        """
+        last_error = None
+        for model in LLM_MODELS:
+            try:
+                resp = self.groq.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=max_tokens,
+                )
+                if model != LLM_MODELS[0]:
+                    log.info(f"[Fallback] Đang dùng model dự phòng: {model}")
+                return resp.choices[0].message.content.strip()
+            except Exception as e:
+                err_str = str(e).lower()
+                # Chỉ fallback khi lỗi quota/rate-limit, còn lỗi khác thì raise luôn
+                if any(k in err_str for k in ["rate_limit", "rate limit", "429",
+                                               "quota", "capacity", "overloaded",
+                                               "tokens per", "requests per"]):
+                    log.warning(f"[Fallback] {model} hết quota → thử model tiếp: {e}")
+                    last_error = e
+                    time.sleep(0.5)   # nghỉ nhẹ trước khi thử model kế
+                    continue
+                raise  # lỗi khác (auth, network...) → không fallback
+        raise Exception(
+            f"Tất cả model Groq đều đang quá tải. Vui lòng thử lại sau ít phút. "
+            f"(Lỗi cuối: {last_error})"
+        )
+
     def _phan_loai(self, cau_hoi: str) -> tuple[list[str], str]:
         """Gọi Orchestrator → lấy danh sách agent cần dùng và câu hỏi thêm nếu có."""
-        resp = self.groq.chat.completions.create(
-            model=LLM_MODEL,
-            messages=[
-                {"role": "system", "content": ORCHESTRATOR_SYSTEM},
-                {"role": "user",   "content": build_orchestrator_prompt(cau_hoi)},
-            ],
-            max_tokens=200,
-        )
         try:
-            text = resp.choices[0].message.content.strip()
+            text = self._goi_llm(
+                messages=[
+                    {"role": "system", "content": ORCHESTRATOR_SYSTEM},
+                    {"role": "user",   "content": build_orchestrator_prompt(cau_hoi)},
+                ],
+                max_tokens=200,
+            )
             text = text.replace("```json", "").replace("```", "").strip()
             data = json.loads(text)
             agents = data.get("agents", ["nganh"])
@@ -1483,28 +1525,25 @@ class TuVanTuyenSinh:
         # Inject ngày giờ thực vào system prompt
         system_prompt_final = system_prompt.replace("{ngay_hom_nay}", _ngay_hom_nay())
 
-        resp = self.groq.chat.completions.create(
-            model=LLM_MODEL,
+        resp = self._goi_llm(
             messages=[
                 {"role": "system", "content": system_prompt_final},
                 {"role": "user",   "content": build_fn(du_lieu, cau_hoi, lich_su_text)},
             ],
             max_tokens=1200,
         )
-        return resp.choices[0].message.content.strip()
+        return resp
 
     def _tong_hop(self, cau_hoi_goc: str, cac_ket_qua: dict) -> str:
         """Gọi Aggregator tổng hợp kết quả từ nhiều agent thành 1 câu trả lời."""
         aggregator_final = AGGREGATOR_SYSTEM.replace("{ngay_hom_nay}", _ngay_hom_nay())
-        resp = self.groq.chat.completions.create(
-            model=LLM_MODEL,
+        return self._goi_llm(
             messages=[
                 {"role": "system", "content": aggregator_final},
                 {"role": "user",   "content": build_aggregator_prompt(cau_hoi_goc, cac_ket_qua)},
             ],
             max_tokens=1200,
         )
-        return resp.choices[0].message.content.strip()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
